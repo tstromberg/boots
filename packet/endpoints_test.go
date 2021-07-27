@@ -34,7 +34,7 @@ func TestDiscoverHardwareFromDHCP(t *testing.T) {
 		gResponse string
 		code      int
 		hResponse string
-		id        string
+		id        HardwareID
 	}{
 		{name: "has grpc error",
 			err: errors.New("some error"),
@@ -90,7 +90,7 @@ func TestDiscoverHardwareFromDHCP(t *testing.T) {
 			assert.NoError(t, err)
 			assert.NotNil(t, d)
 			assert.IsType(t, &DiscoveryCacher{}, d)
-			assert.Equal(t, id.String(), d.Hardware().HardwareID())
+			assert.Equal(t, HardwareID(id.String()), d.Hardware().HardwareID())
 		})
 	}
 }
@@ -98,7 +98,7 @@ func TestDiscoverHardwareFromDHCP(t *testing.T) {
 func TestGetWorkflowsFromTink(t *testing.T) {
 	for _, test := range []struct {
 		name string
-		hwID string
+		hwID HardwareID
 		wcl  *tw.WorkflowContextList
 		err  error
 	}{
@@ -106,7 +106,7 @@ func TestGetWorkflowsFromTink(t *testing.T) {
 			hwID: "Hardware-fake-bde9-812726eff314",
 			wcl: &tw.WorkflowContextList{
 				WorkflowContexts: []*tw.WorkflowContext{
-					&tw.WorkflowContext{
+					{
 						WorkflowId:         "active-fake-workflow-bde9-812726eff314",
 						CurrentActionState: 0,
 					},
@@ -121,12 +121,13 @@ func TestGetWorkflowsFromTink(t *testing.T) {
 			if err != nil {
 				t.Fatal(err)
 			}
-			c := NewMockClient(u)
+
 			ctrl := gomock.NewController(t)
 			defer ctrl.Finish()
 			cMock := workflowMock.NewMockWorkflowServiceClient(ctrl)
 			cMock.EXPECT().GetWorkflowContextList(gomock.Any(), gomock.Any()).Return(test.wcl, test.err)
-			c.workflowClient = cMock
+
+			c := NewMockClient(u, cMock)
 			w, err := c.GetWorkflowsFromTink(test.hwID)
 			if test.err != nil {
 				assert.Error(t, err)

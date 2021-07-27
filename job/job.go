@@ -14,10 +14,17 @@ import (
 )
 
 var client *packet.Client
+var provisionerEngineName string
 
 // SetClient sets the client used to interact with the api.
 func SetClient(c *packet.Client) {
 	client = c
+}
+
+// SetProvisionerEngineName sets the provisioning engine name used
+// for this instance of boots
+func SetProvisionerEngineName(engineName string) {
+	provisionerEngineName = engineName
 }
 
 // Job this comment is useless
@@ -36,12 +43,27 @@ type Job struct {
 	instance *packet.Instance
 }
 
-// hasActiveWorkflow fetches workflows for a given hwID and returns
-// the status true if there is a pending (active) workflow for hwID
-// hwID is the hardware/worker ID corresponding to the MAC
-func hasActiveWorkflow(wcl *tw.WorkflowContextList) (bool, error) {
+// AllowPxe returns the value from the hardware data
+// in tink server defined at network.interfaces[].netboot.allow_pxe
+func (j Job) AllowPxe() bool {
+	return j.hardware.HardwareAllowPXE(j.mac)
+}
+
+// ProvisionerEngineName returns the current provisioning engine name
+// as defined by the env var PROVISIONER_ENGINE_NAME supplied at runtime
+func (j Job) ProvisionerEngineName() string {
+	return provisionerEngineName
+}
+
+// HasActiveWorkflow fetches workflows for the given hardware and returns
+// the status true if there is a pending (active) workflow
+func HasActiveWorkflow(hwID packet.HardwareID) (bool, error) {
+	wcl, err := client.GetWorkflowsFromTink(hwID)
+	if err != nil {
+		return false, err
+	}
 	for _, wf := range (*wcl).WorkflowContexts {
-		if wf.CurrentActionState == tw.State_STATE_PENDING {
+		if wf.CurrentActionState == tw.State_STATE_PENDING || wf.CurrentActionState == tw.State_STATE_RUNNING {
 			joblog.With("workflowID", wf.WorkflowId).Info("found active workflow for hardware")
 			return true, nil
 		}
@@ -108,18 +130,8 @@ func CreateFromIP(ip net.IP) (Job, error) {
 	hwID := hd.HardwareID()
 
 	joblog.With("hardwareID", hwID).Info("fetching workflows for hardware")
-	wcl, err := client.GetWorkflowsFromTink(hwID)
 	if err != nil {
 		return Job{}, err
-	}
-
-	activeWorkflows, err := hasActiveWorkflow(wcl)
-	if err != nil {
-		return Job{}, err
-	}
-
-	if !activeWorkflows {
-		return Job{}, errors.Errorf("no active workflow found for hardware %s", hwID)
 	}
 
 	return j, nil

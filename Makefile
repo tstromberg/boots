@@ -1,40 +1,38 @@
-MAKEFLAGS += --no-builtin-rules
-.PHONY: ${binary} dc gen test
-.SUFFIXES:
+all: help
 
-binary := boots
-all: ${binary}
+-include rules.mk
 
-crosscompile: $(shell git ls-files | grep -v -e vendor -e '_test.go' | grep '.go$$' )
-	CGO_ENABLED=0 GOOS=linux GOARCH=386 go build -v -o ./boots-linux-x86_64 -ldflags="-X main.GitRev=$(shell git rev-parse --short HEAD)"
-	CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -v -o ./boots-linux-amd64 -ldflags="-X main.GitRev=$(shell git rev-parse --short HEAD)"
-	CGO_ENABLED=0 GOOS=linux GOARCH=arm GOARM=6 go build -v -o ./boots-linux-aarch64 -ldflags="-X main.GitRev=$(shell git rev-parse --short HEAD)"
-	CGO_ENABLED=0 GOOS=linux GOARCH=arm GOARM=7 go build -v -o ./boots-linux-armv7l -ldflags="-X main.GitRev=$(shell git rev-parse --short HEAD)"
-	CGO_ENABLED=0 GOOS=linux GOARCH=arm64 go build -v -o ./boots-linux-arm64 -ldflags="-X main.GitRev=$(shell git rev-parse --short HEAD)"
+boots: cmd/boots/boots ## Compile boots for host OS and Architecture
 
+ipxe: build_all_ipxe ## Build all iPXE binaries 
 
-# this is quick and its really only for rebuilding when dev'ing, I wish go would
-# output deps in make syntax like gcc does... oh well this is good enough
-${binary}: $(shell git ls-files | grep -v -e vendor -e '_test.go' | grep '.go$$' )
-	CGO_ENABLED=0 go build -v -ldflags="-X main.GitRev=$(shell git rev-parse --short HEAD)"
+crosscompile: $(crossbinaries) ## Compile boots for all architectures
+	
+gen: $(generated_files) ## Generate go generate'd files
 
-ifeq ($(origin GOBIN), undefined)
-GOBIN := ${PWD}/bin
-export GOBIN
-endif
+image: cmd/boots/boots-linux-amd64 ## Build docker image
+	docker build -t boots .
 
-ipxe/bindata.go:
-	$(MAKE) -C ipxe
+test: gen ## Run go test
+	CGO_ENABLED=1 go test -race -coverprofile=coverage.txt -covermode=atomic -gcflags=-l ${TEST_ARGS} ./...
 
-ifeq ($(CI),drone)
-run: ${binary}
-	${binary}
-test:
-	go test -race -coverprofile=coverage.txt -covermode=atomic ${TEST_ARGS} ./...
-else
-run: ${binary}
-	docker-compose up -d --build cacher
-	docker-compose up --build boots
-test:
-	docker-compose up -d --build cacher
-endif
+test-ipxe: ipxe/tests ## Run iPXE feature tests
+
+coverage: test ## Show test coverage
+	go tool cover -func=coverage.txt
+
+vet: ## Run go vet
+	go vet ./...
+
+goimports: ## Run goimports
+	@echo be sure goimports is installed
+	goimports -w .
+
+golangci-lint: ## Run golangci-lint
+	@echo be sure golangci-lint is installed: https://golangci-lint.run/usage/install/
+	golangci-lint run
+
+validate-local: vet coverage goimports golangci-lint ## Runs all the same validations and tests that run in CI
+
+help: ## Print this help
+	@grep --no-filename -E '^[a-zA-Z0-9_-]+:.*?## .*$$' $(MAKEFILE_LIST) | sed 's/:.*##/·/' | sort | column -ts '·' -c 120
