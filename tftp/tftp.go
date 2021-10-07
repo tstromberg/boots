@@ -30,14 +30,14 @@ var tftpFiles = map[string][]byte{
 	"snp-hua.efi":    snpHua,
 }
 
-type tftpTransfer struct {
+type Transfer struct {
 	log.Logger
 	unread []byte
 	start  time.Time
 }
 
-// Open sets up a tftp transfer object that implements tftpgo.ReadCloser
-func Open(mac net.HardwareAddr, filename, client string) (*tftpTransfer, error) {
+// Open sets up a tftp transfer object that implements tftpgo.ReadCloser.
+func Open(mac net.HardwareAddr, filename, client string) (*Transfer, error) {
 	l := tftplog.With("mac", mac, "client", client, "filename", filename)
 
 	content, ok := tftpFiles[filename]
@@ -48,7 +48,7 @@ func Open(mac net.HardwareAddr, filename, client string) (*tftpTransfer, error) 
 		return nil, err
 	}
 
-	t := &tftpTransfer{
+	t := &Transfer{
 		Logger: l,
 		unread: content,
 		start:  time.Now(),
@@ -59,7 +59,7 @@ func Open(mac net.HardwareAddr, filename, client string) (*tftpTransfer, error) 
 	return t, nil
 }
 
-func (t *tftpTransfer) Close() error {
+func (t *Transfer) Close() error {
 	d := time.Since(t.start)
 	n := len(t.unread)
 
@@ -70,7 +70,7 @@ func (t *tftpTransfer) Close() error {
 	return nil
 }
 
-func (t *tftpTransfer) Read(p []byte) (n int, err error) {
+func (t *Transfer) Read(p []byte) (n int, err error) {
 	if len(p) == 0 {
 		t.With("event", "read", "read", 0, "unread", len(t.unread)).Info()
 
@@ -89,6 +89,6 @@ func (t *tftpTransfer) Read(p []byte) (n int, err error) {
 	return
 }
 
-func (t *tftpTransfer) Size() int {
+func (t *Transfer) Size() int {
 	return len(t.unread)
 }

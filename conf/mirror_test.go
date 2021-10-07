@@ -141,7 +141,8 @@ func Test_buildMirrorURL(t *testing.T) {
 			want: &url.URL{
 				Scheme: "http",
 				Host:   "10.10.10.10",
-				Path:   defaultMirrorPath},
+				Path:   defaultMirrorPath,
+			},
 		},
 		{
 			name:       "Specifying MIRROR_HOST and MIRROR_PATH returns the correct result",
@@ -150,7 +151,8 @@ func Test_buildMirrorURL(t *testing.T) {
 			want: &url.URL{
 				Scheme: "http",
 				Host:   "10.10.10.10",
-				Path:   "/my/special/path"},
+				Path:   "/my/special/path",
+			},
 		},
 		{
 			name:          "Accepts MIRROR_BASE_URL value that does not contain a port number",
@@ -158,7 +160,8 @@ func Test_buildMirrorURL(t *testing.T) {
 			want: &url.URL{
 				Scheme: "http",
 				Host:   "10.10.10.10",
-				Path:   defaultMirrorPath},
+				Path:   defaultMirrorPath,
+			},
 		},
 		{
 			name:          "Accepts MIRROR_BASE_URL value that contains a port number",
@@ -166,7 +169,8 @@ func Test_buildMirrorURL(t *testing.T) {
 			want: &url.URL{
 				Scheme: "http",
 				Host:   "10.10.10.10:8080",
-				Path:   defaultMirrorPath},
+				Path:   defaultMirrorPath,
+			},
 		},
 		{
 			name:          "Accepts MIRROR_BASE_URL value that contains a port number",
@@ -174,7 +178,8 @@ func Test_buildMirrorURL(t *testing.T) {
 			want: &url.URL{
 				Scheme: "http",
 				Host:   "10.10.10.10:8080",
-				Path:   defaultMirrorPath},
+				Path:   defaultMirrorPath,
+			},
 		},
 		{
 			name:          "Specifying MIRROR_BASE_URL and MIRROR_PATH returns the correct result",
@@ -183,7 +188,8 @@ func Test_buildMirrorURL(t *testing.T) {
 			want: &url.URL{
 				Scheme: "http",
 				Host:   "10.10.10.10",
-				Path:   "/my/special/path"},
+				Path:   "/my/special/path",
+			},
 		},
 		{
 			name:          "Rejects MIRROR_BASE_URL value that contains a path",
@@ -197,14 +203,16 @@ func Test_buildMirrorURL(t *testing.T) {
 			want: &url.URL{
 				Scheme: "http",
 				Host:   "10.10.10.10:8080",
-				Path:   defaultMirrorPath},
+				Path:   defaultMirrorPath,
+			},
 		},
 		{
 			name: "Default value",
 			want: &url.URL{
 				Scheme: "http",
 				Host:   "install.ewr1.packet.net",
-				Path:   defaultMirrorPath},
+				Path:   defaultMirrorPath,
+			},
 		},
 		{
 			name:         "Default value, override facility",
@@ -212,7 +220,8 @@ func Test_buildMirrorURL(t *testing.T) {
 			want: &url.URL{
 				Scheme: "http",
 				Host:   "install.blue.packet.net",
-				Path:   defaultMirrorPath},
+				Path:   defaultMirrorPath,
+			},
 		},
 		{
 			name:       "Default value, override MIRROR_PATH",
@@ -220,7 +229,8 @@ func Test_buildMirrorURL(t *testing.T) {
 			want: &url.URL{
 				Scheme: "http",
 				Host:   "install.ewr1.packet.net",
-				Path:   "/my/special/path"},
+				Path:   "/my/special/path",
+			},
 		},
 	}
 	for _, tt := range tests {

@@ -15,16 +15,16 @@ const (
 
 var (
 	osieURL                            = mustBuildOSIEURL().String()
-	mirrorBaseURL                      = conf.MirrorBaseUrl
+	mirrorBaseURL                      = conf.MirrorBaseURL
 	dockerRegistry                     string
 	grpcAuthority, grpcCertURL         string
 	registryUsername, registryPassword string
 )
 
 func buildOSIEURL() (*url.URL, error) {
-	base, err := url.Parse(conf.MirrorBaseUrl)
+	base, err := url.Parse(conf.MirrorBaseURL)
 	if err != nil {
-		return nil, errors.Wrap(err, "parsing MirrorBaseUrl")
+		return nil, errors.Wrap(err, "parsing MirrorBaseURL")
 	}
 	if s, ok := os.LookupEnv("OSIE_PATH"); ok {
 		u, err := base.Parse(s)

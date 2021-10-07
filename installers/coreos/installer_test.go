@@ -10,6 +10,8 @@ import (
 )
 
 func assertLines(t *testing.T, m job.Mock, execLines []string) {
+	t.Helper()
+
 	assert := require.New(t)
 	su := ignition.SystemdUnits{}
 	configureInstaller(m.Job(), su.Add("install.service"))
@@ -21,7 +23,8 @@ func assertLines(t *testing.T, m job.Mock, execLines []string) {
 	assert.True(unit.Enabled)
 	bytes, err := unit.Contents.MarshalText()
 	assert.Nil(err)
-	verifyLines := append(baseStart, execLines...)
+
+	verifyLines := append(baseStart, execLines...) // nolint:gocritic // append result not assigned to the same slice
 	verifyLines = append(verifyLines, baseEnd...)
 	assert.Equal(strings.Join(verifyLines, "\n"), string(bytes))
 }
@@ -38,7 +41,7 @@ func TestInstaller(t *testing.T) {
 				m.SetOSSlug(distro + "_alpha")
 				m.SetOSVersion("alpha")
 				for i := range execLines {
-					execLines[i] = strings.Replace(execLines[i], "coreos", distro, -1)
+					execLines[i] = strings.ReplaceAll(execLines[i], "coreos", distro)
 				}
 				assertLines(t, m, execLines)
 			})
@@ -46,7 +49,7 @@ func TestInstaller(t *testing.T) {
 	}
 }
 
-// this is the base set of starter commands for coreos installs
+// this is the base set of starter commands for coreos installs.
 var baseStart = []string{
 	"[Unit]",
 	"Requires=systemd-networkd-wait-online.service",
@@ -56,7 +59,7 @@ var baseStart = []string{
 	"Type=oneshot",
 }
 
-// this is the end of every coreos install
+// this is the end of every coreos install.
 var baseEnd = []string{
 	"ExecStart=/usr/bin/systemctl reboot",
 	"",
@@ -80,7 +83,7 @@ func replacer(l []string, replacements ...string) []string {
 		panic("replacements count must be even multiple of 2")
 	}
 	script := strings.Join(l, "\n")
-	for i := 0; i < len(replacements); i = i + 2 {
+	for i := 0; i < len(replacements); i += 2 {
 		script = strings.ReplaceAll(script, replacements[i], replacements[i+1])
 	}
 

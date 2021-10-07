@@ -2,6 +2,7 @@ package coreos
 
 import (
 	"archive/tar"
+	"fmt"
 	"net/http"
 	"strings"
 
@@ -38,26 +39,35 @@ func ServeOEM() func(w http.ResponseWriter, req *http.Request) {
 		}
 
 		// grub.cfg
-		f := tw.NewFile("grub.cfg", 0644, tar.TypeReg)
+		f := tw.NewFile("grub.cfg", 0o644, tar.TypeReg)
 		f.Writef("set linux_append=%q\n", strings.Join(args, " "))
 		f.Writef("set linux_console=%q\n", console)
 		f.Writef("set oem_id=packet\n")
 		f.Close()
 
-		// cloud-config.yml
-		f = tw.NewFile("cloud-config.yml", 0644, tar.TypeReg)
-		f.WriteString(cloudConfig)
-		f.Close()
+		if err := addTarFile(tw, "cloud-config.yml", 0o644, cloudConfig); err != nil {
+			installers.Logger("coreos").With("client", req.RemoteAddr).Error(err, "cloud-config")
+		}
 
-		// bin/phone-home.sh
-		f = tw.NewFile("bin/phone-home.sh", 0755, tar.TypeReg)
-		f.WriteString(phoneHome)
-		f.Close()
-
-		f = tw.NewFile("phone-home.service", 0644, tar.TypeReg)
-		f.WriteString(phoneHomeService)
-		f.Close()
+		if err := addTarFile(tw, "bin/phone-home.sh", 0o755, phoneHome); err != nil {
+			installers.Logger("coreos").With("client", req.RemoteAddr).Error(err, "phone-home")
+		}
+		if err := addTarFile(tw, "phone-home.service", 0o644, phoneHomeService); err != nil {
+			installers.Logger("coreos").With("client", req.RemoteAddr).Error(err, "phone-home.service")
+		}
 	}
+}
+
+func addTarFile(tw *tarball.Tarball, name string, mode int64, content string) error {
+	f := tw.NewFile(name, mode, tar.TypeReg)
+	if _, err := f.WriteString(content); err != nil {
+		return fmt.Errorf("write string: %w", err)
+	}
+
+	if err := f.Close(); err != nil {
+		return fmt.Errorf("close: %w", err)
+	}
+	return nil
 }
 
 const cloudConfig = `#cloud-config
@@ -88,6 +98,7 @@ while ! curl -H "Content-Type: application/json" -X POST ${phone_home_url}; do
 	sleep 2
 done
 `
+
 const phoneHomeService = `
 [Unit]
 Description=Phone home to packet to confirm installation completion

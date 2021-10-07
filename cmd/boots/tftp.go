@@ -30,7 +30,7 @@ func init() {
 	flag.StringVar(&tftpAddr, "tftp-addr", tftpAddr, "IP and port to listen on for TFTP.")
 }
 
-// ServeTFTP is a useless comment
+// ServeTFTP is a useless comment.
 func ServeTFTP() {
 	err := retry.Do(
 		func() error {
@@ -116,31 +116,32 @@ func extractTraceparentFromFilename(ctx context.Context, filename string) (conte
 	// traceparentRe captures 4 items, the original filename, the trace id, span id, and trace flags
 	traceparentRe := regexp.MustCompile("^(.*)-[[:xdigit:]]{2}-([[:xdigit:]]{32})-([[:xdigit:]]{16})-([[:xdigit:]]{2})")
 	parts := traceparentRe.FindStringSubmatch(filename)
-	if len(parts) == 5 {
-		traceId, err := trace.TraceIDFromHex(parts[2])
-		if err != nil {
-			return ctx, filename, fmt.Errorf("parsing OpenTelemetry trace id %q failed: %s", parts[2], err)
-		}
 
-		spanId, err := trace.SpanIDFromHex(parts[3])
-		if err != nil {
-			return ctx, filename, fmt.Errorf("parsing OpenTelemetry span id %q failed: %s", parts[3], err)
-		}
-
-		// create a span context with the parent trace id & span id
-		spanCtx := trace.NewSpanContext(trace.SpanContextConfig{
-			TraceID:    traceId,
-			SpanID:     spanId,
-			Remote:     true,
-			TraceFlags: trace.FlagsSampled, // TODO: use the parts[4] value instead
-		})
-
-		// inject it into the context.Context and return it along with the original filename
-		return trace.ContextWithSpanContext(ctx, spanCtx), parts[1], nil
-	} else {
+	if len(parts) != 5 {
 		// no traceparent found, return everything as it was
 		return ctx, filename, nil
 	}
+
+	traceID, err := trace.TraceIDFromHex(parts[2])
+	if err != nil {
+		return ctx, filename, fmt.Errorf("parsing OpenTelemetry trace id %q failed: %w", parts[2], err)
+	}
+
+	spanID, err := trace.SpanIDFromHex(parts[3])
+	if err != nil {
+		return ctx, filename, fmt.Errorf("parsing OpenTelemetry span id %q failed: %w", parts[3], err)
+	}
+
+	// create a span context with the parent trace id & span id
+	spanCtx := trace.NewSpanContext(trace.SpanContextConfig{
+		TraceID:    traceID,
+		SpanID:     spanID,
+		Remote:     true,
+		TraceFlags: trace.FlagsSampled, // TODO: use the parts[4] value instead
+	})
+
+	// inject it into the context.Context and return it along with the original filename
+	return trace.ContextWithSpanContext(ctx, spanCtx), parts[1], nil
 }
 
 func serveFakeReader(l log.Logger, filename string) (tftp.ReadCloser, error) {

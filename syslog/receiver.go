@@ -2,6 +2,7 @@ package syslog
 
 import (
 	"flag"
+	"fmt"
 	"net"
 	"sync"
 	"time"
@@ -75,6 +76,8 @@ func (r *Receiver) cleanup() {
 
 func (r *Receiver) run() {
 	var msg *message
+	var ok bool
+
 	defer func() {
 		if msg != nil {
 			syslogMessagePool.Put(msg)
@@ -84,8 +87,13 @@ func (r *Receiver) run() {
 
 	for {
 		if msg == nil {
-			msg = syslogMessagePool.Get().(*message)
+			pg := syslogMessagePool.Get()
+			msg, ok = pg.(*message)
+			if !ok {
+				sysloglog.Error(fmt.Errorf("type assert to message failed: syslogMessagePool.Get returned %T: %+v", pg, pg))
+			}
 		}
+
 		n, from, err := r.c.ReadFromUDP(msg.buf[:])
 		if err != nil {
 			err = errors.Wrap(err, "error reading udp message")

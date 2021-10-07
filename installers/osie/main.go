@@ -17,7 +17,7 @@ func (i Installer) Rescue() job.BootScript {
 		s.Set("action", "rescue")
 		s.Set("state", j.HardwareState())
 
-		return bootScript(ctx, "rescue", j, s)
+		return bootScript(ctx, j, s)
 	}
 }
 
@@ -35,7 +35,7 @@ func (i Installer) Install() job.BootScript {
 		}
 		s.Set("state", j.HardwareState())
 
-		return bootScript(ctx, "install", j, s)
+		return bootScript(ctx, j, s)
 	}
 }
 
@@ -44,18 +44,18 @@ func (i Installer) Discover() job.BootScript {
 		s.Set("action", "discover")
 		s.Set("state", j.HardwareState())
 
-		return bootScript(ctx, "discover", j, s)
+		return bootScript(ctx, j, s)
 	}
 }
 
-func bootScript(ctx context.Context, action string, j job.Job, s ipxe.Script) ipxe.Script {
+func bootScript(ctx context.Context, j job.Job, s ipxe.Script) ipxe.Script {
 	s.Set("arch", j.Arch())
 	s.Set("parch", j.PArch())
 	s.Set("bootdevmac", j.PrimaryNIC().String())
 	s.Set("base-url", osieBaseURL(j))
 	s.Kernel("${base-url}/" + kernelPath(j))
 
-	ks := kernelParams(ctx, action, j.HardwareState(), j, s)
+	ks := kernelParams(ctx, j.HardwareState(), j, s)
 
 	ks.Initrd("${base-url}/" + initrdPath(j))
 
@@ -69,11 +69,11 @@ func bootScript(ctx context.Context, action string, j job.Job, s ipxe.Script) ip
 	return ks
 }
 
-func kernelParams(ctx context.Context, action, state string, j job.Job, s ipxe.Script) ipxe.Script {
+func kernelParams(ctx context.Context, action string, j job.Job, s ipxe.Script) ipxe.Script {
 	s.Args("ip=dhcp") // Dracut?
 	s.Args("modules=loop,squashfs,sd-mod,usb-storage")
-	s.Args("alpine_repo=" + alpineMirror(j))
-	s.Args("modloop=${base-url}/" + modloopPath(j))
+	s.Args("alpine_repo=" + alpineMirror())
+	s.Args("modloop=${base-url}/" + modloopPath())
 	s.Args("tinkerbell=${tinkerbell}")
 	s.Args("syslog_host=${syslog_host}")
 	s.Args("parch=${parch}")
@@ -87,8 +87,8 @@ func kernelParams(ctx context.Context, action, state string, j job.Job, s ipxe.S
 	}
 
 	// Only provide the Hollow secrets for deprovisions
-	if j.HardwareState() == "deprovisioning" && conf.HollowClientId != "" && conf.HollowClientRequestSecret != "" {
-		s.Args("hollow_client_id=" + conf.HollowClientId)
+	if j.HardwareState() == "deprovisioning" && conf.HollowClientID != "" && conf.HollowClientRequestSecret != "" {
+		s.Args("hollow_client_id=" + conf.HollowClientID)
 		s.Args("hollow_client_request_secret=" + conf.HollowClientRequestSecret)
 	}
 
@@ -160,11 +160,11 @@ func kernelParams(ctx context.Context, action, state string, j job.Job, s ipxe.S
 	return s
 }
 
-func alpineMirror(j job.Job) string {
+func alpineMirror() string {
 	return "${base-url}/repo-${arch}/main"
 }
 
-func modloopPath(j job.Job) string {
+func modloopPath() string {
 	return "modloop-${parch}"
 }
 
@@ -188,7 +188,7 @@ func isCustomOSIE(j job.Job) bool {
 	return j.OSIEVersion() != ""
 }
 
-// osieBaseURL returns the value of Custom OSIE Service Version or just /current
+// osieBaseURL returns the value of Custom OSIE Service Version or just /current.
 func osieBaseURL(j job.Job) string {
 	if u := j.OSIEBaseURL(); u != "" {
 		return u

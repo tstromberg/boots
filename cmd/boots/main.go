@@ -20,7 +20,7 @@ import (
 	"github.com/tinkerbell/boots/tftp"
 
 	"github.com/tinkerbell/boots/installers/coreos"
-	"github.com/tinkerbell/boots/installers/custom_ipxe"
+	"github.com/tinkerbell/boots/installers/custom"
 	"github.com/tinkerbell/boots/installers/nixos"
 	"github.com/tinkerbell/boots/installers/osie"
 	"github.com/tinkerbell/boots/installers/rancher"
@@ -30,7 +30,6 @@ import (
 )
 
 var (
-	client                packet.Client
 	apiBaseURL            = env.URL("API_BASE_URL", "https://api.packet.net")
 	provisionerEngineName = env.Get("PROVISIONER_ENGINE_NAME", "packet")
 
@@ -76,11 +75,12 @@ func main() {
 		mainlog.With("envvar", "API_AUTH_TOKEN").Fatal(err)
 		panic(err)
 	}
-	client, err = packet.NewClient(l, consumer, auth, apiBaseURL)
+
+	c, err := packet.NewClient(l, consumer, auth, apiBaseURL)
 	if err != nil {
 		mainlog.Fatal(err)
 	}
-	job.SetClient(client)
+	job.SetClient(c)
 	job.SetProvisionerEngineName(provisionerEngineName)
 
 	go func() {
@@ -103,7 +103,7 @@ func main() {
 	go ServeDHCP()
 
 	mainlog.Info("serving http")
-	ServeHTTP(registerInstallers())
+	ServeHTTP(c, registerInstallers())
 }
 
 func registerInstallers() job.Installers {
@@ -114,7 +114,7 @@ func registerInstallers() job.Installers {
 	i.RegisterDistro("coreos", c.BootScript())
 	i.RegisterDistro("flatcar", c.BootScript())
 	// register custom ipxe
-	ci := custom_ipxe.Installer{}
+	ci := custom.Installer{}
 	i.RegisterDistro("custom_ipxe", ci.BootScript())
 	i.RegisterInstaller("custom_ipxe", ci.BootScript())
 	// register nixos

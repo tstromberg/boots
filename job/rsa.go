@@ -51,7 +51,9 @@ func ServePublicKey(w http.ResponseWriter, req *http.Request) {
 	switch req.Method {
 	case "GET", "HEAD":
 		w.WriteHeader(http.StatusOK)
-		w.Write(rsaKeypair.pub)
+		if _, err := w.Write(rsaKeypair.pub); err != nil {
+			joblog.Error(errors.Wrap(err, "write failed"))
+		}
 
 		return
 	default:

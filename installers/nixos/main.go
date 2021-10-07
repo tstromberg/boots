@@ -37,12 +37,11 @@ func BuildInitPaths() map[string]string {
 		}
 
 		// shell env vars are only [a-zA-Z0-9_] so we use "_" in place of "." in hw slug, so need to go back
-		os, hw := slugs[0], slugs[1]
-		hw = strings.Replace(hw, "_", ".", -1)
-		k = os + "/" + hw
+		opSys, hw := slugs[0], slugs[1]
+		hw = strings.ReplaceAll(hw, "_", ".")
+		k = opSys + "/" + hw
 
 		paths[k] = "/nix/store/" + v + "/init"
-
 	}
 
 	return paths

@@ -23,7 +23,6 @@ var facility = func() string {
 func TestScript(t *testing.T) {
 	for typ, script := range type2Script {
 		t.Run(typ, func(t *testing.T) {
-
 			split := strings.Split(typ, "/")
 			v, typ := split[0], split[1]
 			tag := ""

@@ -2,6 +2,7 @@ package job
 
 import (
 	"context"
+	"io"
 	"net"
 	"os"
 	"time"
@@ -17,21 +18,44 @@ import (
 	"go.opentelemetry.io/otel/trace"
 )
 
-var client packet.Client
-var provisionerEngineName string
+// Clienter is an interface corresponding to packet.Client.
+type Clienter interface {
+	GetWorkflowsFromTink(context.Context, packet.HardwareID) (*tw.WorkflowContextList, error)
+	DiscoverHardwareFromDHCP(context.Context, net.HardwareAddr, net.IP, string) (packet.Discovery, error)
+	ReportDiscovery(context.Context, net.HardwareAddr, net.IP, string) (packet.Discovery, error)
+
+	DiscoverHardwareFromIP(context.Context, net.IP) (packet.Discovery, error)
+	PostHardwareComponent(context.Context, packet.HardwareID, io.Reader) (*packet.ComponentsResponse, error)
+	PostHardwareEvent(context.Context, string, io.Reader) (string, error)
+	PostHardwarePhoneHome(context.Context, string) error
+	PostHardwareFail(context.Context, string, io.Reader) error
+	PostHardwareProblem(context.Context, packet.HardwareID, io.Reader) (string, error)
+
+	GetInstanceIDFromIP(context.Context, net.IP) (string, error)
+	PostInstancePhoneHome(context.Context, string) error
+	PostInstanceEvent(context.Context, string, io.Reader) (string, error)
+	PostInstanceFail(context.Context, string, io.Reader) error
+	PostInstancePassword(context.Context, string, string) error
+	UpdateInstance(context.Context, string, io.Reader) error
+}
+
+var (
+	client                Clienter
+	provisionerEngineName string
+)
 
 // SetClient sets the client used to interact with the api.
-func SetClient(c packet.Client) {
+func SetClient(c Clienter) {
 	client = c
 }
 
 // SetProvisionerEngineName sets the provisioning engine name used
-// for this instance of boots
+// for this instance of boots.
 func SetProvisionerEngineName(engineName string) {
 	provisionerEngineName = engineName
 }
 
-// Job holds per request data
+// Job holds per request data.
 type Job struct {
 	log.Logger
 	mac      net.HardwareAddr
@@ -60,25 +84,25 @@ func NewInstallers() Installers {
 }
 
 // AllowPxe returns the value from the hardware data
-// in tink server defined at network.interfaces[].netboot.allow_pxe
+// in tink server defined at network.interfaces[].netboot.allow_pxe.
 func (j Job) AllowPxe() bool {
 	return j.hardware.HardwareAllowPXE(j.mac)
 }
 
 // ProvisionerEngineName returns the current provisioning engine name
-// as defined by the env var PROVISIONER_ENGINE_NAME supplied at runtime
+// as defined by the env var PROVISIONER_ENGINE_NAME supplied at runtime.
 func (j Job) ProvisionerEngineName() string {
 	return provisionerEngineName
 }
 
 // HasActiveWorkflow fetches workflows for the given hardware and returns
-// the status true if there is a pending (active) workflow
+// the status true if there is a pending (active) workflow.
 func HasActiveWorkflow(ctx context.Context, hwID packet.HardwareID) (bool, error) {
 	wcl, err := client.GetWorkflowsFromTink(ctx, hwID)
 	if err != nil {
 		return false, err
 	}
-	for _, wf := range (*wcl).WorkflowContexts {
+	for _, wf := range wcl.WorkflowContexts {
 		if wf.CurrentActionState == tw.State_STATE_PENDING || wf.CurrentActionState == tw.State_STATE_RUNNING {
 			return true, nil
 		}
@@ -87,7 +111,7 @@ func HasActiveWorkflow(ctx context.Context, hwID packet.HardwareID) (bool, error
 	return false, nil
 }
 
-// CreateFromDHCP looks up hardware using the MAC from cacher to create a job
+// CreateFromDHCP looks up hardware using the MAC from cacher to create a job.
 func CreateFromDHCP(ctx context.Context, mac net.HardwareAddr, giaddr net.IP, circuitID string) (Job, error) {
 	j := Job{
 		mac:   mac,
@@ -117,7 +141,7 @@ func CreateFromDHCP(ctx context.Context, mac net.HardwareAddr, giaddr net.IP, ci
 	return j, err
 }
 
-// CreateFromRemoteAddr looks up hardware using the IP from cacher to create a job
+// CreateFromRemoteAddr looks up hardware using the IP from cacher to create a job.
 func CreateFromRemoteAddr(ctx context.Context, ip string) (Job, error) {
 	host, _, err := net.SplitHostPort(ip)
 	if err != nil {
@@ -127,7 +151,7 @@ func CreateFromRemoteAddr(ctx context.Context, ip string) (Job, error) {
 	return CreateFromIP(ctx, net.ParseIP(host))
 }
 
-// CreateFromIP looksup hardware using the IP from cacher to create a job
+// CreateFromIP looksup hardware using the IP from cacher to create a job.
 func CreateFromIP(ctx context.Context, ip net.IP) (Job, error) {
 	j := Job{
 		ip:    ip,
@@ -165,7 +189,7 @@ func CreateFromIP(ctx context.Context, ip net.IP) (Job, error) {
 	return j, nil
 }
 
-// MarkDeviceActive marks the device active
+// MarkDeviceActive marks the device active.
 func (j Job) MarkDeviceActive(ctx context.Context) {
 	if id := j.InstanceID(); id != "" {
 		if err := client.PostInstancePhoneHome(ctx, id); err != nil {
@@ -200,7 +224,7 @@ func (j *Job) setup(d packet.Discovery) error {
 	j.dhcp.Setup(ip.Address, ip.Netmask, ip.Gateway)
 	j.dhcp.SetLeaseTime(d.LeaseTime(j.mac))
 	j.dhcp.SetDHCPServer(conf.PublicIPv4) // used for the unicast DHCPREQUEST
-	j.dhcp.SetDNSServers(d.DnsServers(j.mac))
+	j.dhcp.SetDNSServers(d.DNSServers(j.mac))
 
 	hostname, err := d.Hostname()
 	if err != nil {

@@ -26,7 +26,7 @@ func init() {
 	flag.StringVar(&listenAddr, "dhcp-addr", listenAddr, "IP and port to listen on for DHCP.")
 }
 
-// ServeDHCP is a useless comment
+// ServeDHCP is a useless comment.
 func ServeDHCP() {
 	poolSize := env.Int("BOOTS_DHCP_WORKERS", runtime.GOMAXPROCS(0)/2)
 	handler := dhcpHandler{pool: workerpool.New(poolSize)}
@@ -47,10 +47,10 @@ type dhcpHandler struct {
 }
 
 func (d dhcpHandler) ServeDHCP(w dhcp4.ReplyWriter, req *dhcp4.Packet) {
-	d.pool.Submit(func() { d.serveDHCP(w, req) })
+	d.pool.Submit(func() { d.serve(w, req) })
 }
 
-func (d dhcpHandler) serveDHCP(w dhcp4.ReplyWriter, req *dhcp4.Packet) {
+func (d dhcpHandler) serve(w dhcp4.ReplyWriter, req *dhcp4.Packet) {
 	mac := req.GetCHAddr()
 	if conf.ShouldIgnoreOUI(mac.String()) {
 		mainlog.With("mac", mac).Info("mac is in ignore list")

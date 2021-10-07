@@ -59,7 +59,13 @@ func (c *Config) Hostname() string {
 
 func (c *Config) Setup(address, netmask, gateway net.IP) {
 	v4 := address.To4()
-	if v4 != nil {
+	if v4 == nil {
+		dhcplog.With("address", address).Error(errors.New("address is not an IPv4 address"))
+		c.addr = nil
+		c.opts = nil
+	}
+
+	if v4 := address.To4(); v4 != nil {
 		c.addr = v4
 		c.opts = make(dhcp4.OptionMap, 255)
 
@@ -70,10 +76,6 @@ func (c *Config) Setup(address, netmask, gateway net.IP) {
 		if gateway != nil {
 			c.opts.SetIP(dhcp4.OptionRouter, gateway)
 		}
-	} else {
-		dhcplog.With("address", address).Error(errors.New("address is not an IPv4 address"))
-		c.addr = nil
-		c.opts = nil
 	}
 }
 

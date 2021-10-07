@@ -13,11 +13,13 @@ import (
 )
 
 func genRandMAC(t *testing.T) string {
+	t.Helper()
+
 	buf := make([]byte, 6)
-	_, err := rand.Read(buf)
-	if err != nil {
+	if _, err := rand.Read(buf); err != nil {
 		t.Fatal(err)
 	}
+
 	buf[0] = (buf[0] | 2) & 0xfe // Set local bit, ensure unicast address
 
 	return fmt.Sprintf("%02x:%02x:%02x:%02x:%02x:%02x", buf[0], buf[1], buf[2], buf[3], buf[4], buf[5])
@@ -33,6 +35,8 @@ var facility = func() string {
 }()
 
 func TestScript(t *testing.T) {
+	ctx := context.Background()
+
 	for action, plan2Body := range action2Plan2Body {
 		t.Run(action, func(t *testing.T) {
 			for plan, body := range plan2Body {
@@ -41,12 +45,11 @@ func TestScript(t *testing.T) {
 					m.SetManufacturer("supermicro")
 					m.SetOSSlug("ubuntu_16_04_image")
 
-					state := ""
+					state := "rescuing"
 					if action == "install" {
 						state = "provisioning"
-					} else {
-						state = "rescuing"
 					}
+
 					m.SetState(state)
 
 					mac := genRandMAC(t)
@@ -59,7 +62,6 @@ func TestScript(t *testing.T) {
 					s.Set("syslog_host", "127.0.0.1")
 					s.Set("ipxe_cloud_config", "packet")
 					o := Installer{}
-					ctx := context.Background()
 					var bs ipxe.Script
 					switch action {
 					case "rescue":

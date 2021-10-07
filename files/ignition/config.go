@@ -25,9 +25,8 @@ func (c *Config) Render(w io.Writer) error {
 		return errors.Wrap(err, "marshaling ignition config as json")
 	}
 
-	_, err = w.Write(b)
-	if err != nil {
-		errors.Wrap(err, "writing ignition config")
+	if _, err = w.Write(b); err != nil {
+		return errors.Wrap(err, "writing ignition config")
 	}
 
 	return nil

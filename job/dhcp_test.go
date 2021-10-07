@@ -13,7 +13,7 @@ import (
 func TestGetPXEFilename(t *testing.T) {
 	conf.PublicFQDN = "boots-testing.packet.net"
 
-	var getPXEFilenameTests = []struct {
+	getPXEFilenameTests := []struct {
 		name     string
 		iState   string
 		allowPXE bool
@@ -22,41 +22,63 @@ func TestGetPXEFilename(t *testing.T) {
 		firmware string
 		filename string
 	}{
-		{name: "inactive instance",
-			iState: "not_active"},
-		{name: "active instance",
+		{
+			name:   "inactive instance",
+			iState: "not_active",
+		},
+		{
+			name:     "active instance",
 			iState:   "active",
-			filename: "/pxe-is-not-allowed"},
-		{name: "PXE is allowed for non active instance",
+			filename: "/pxe-is-not-allowed",
+		},
+		{
+			name:   "PXE is allowed for non active instance",
 			iState: "not_active", allowPXE: true, arch: "x86", firmware: "bios",
-			filename: "undionly.kpxe"},
-		{name: "our embedded iPXE wants iPXE script",
+			filename: "undionly.kpxe",
+		},
+		{
+			name:    "our embedded iPXE wants iPXE script",
 			ouriPXE: true, allowPXE: true,
-			filename: "http://" + conf.PublicFQDN + "/auto.ipxe"},
-		{name: "2a2",
+			filename: "http://" + conf.PublicFQDN + "/auto.ipxe",
+		},
+		{
+			name: "2a2",
 			arch: "hua", allowPXE: true,
-			filename: "snp-hua.efi"},
-		{name: "arm",
+			filename: "snp-hua.efi",
+		},
+		{
+			name: "arm",
 			arch: "arm", firmware: "uefi", allowPXE: true,
-			filename: "snp-nolacp.efi"},
-		{name: "hua",
+			filename: "snp-nolacp.efi",
+		},
+		{
+			name: "hua",
 			arch: "hua", allowPXE: true,
-			filename: "snp-hua.efi"},
-		{name: "x86 bios",
+			filename: "snp-hua.efi",
+		},
+		{
+			name: "x86 bios",
 			arch: "x86", firmware: "bios", allowPXE: true,
-			filename: "undionly.kpxe"},
-		{name: "x86 uefi",
+			filename: "undionly.kpxe",
+		},
+		{
+			name: "x86 uefi",
 			arch: "x86", firmware: "uefi", allowPXE: true,
-			filename: "ipxe.efi"},
-		{name: "unknown arch",
-			arch: "riscv", allowPXE: true},
-		{name: "unknown firmware",
-			arch: "coreboot", allowPXE: true},
+			filename: "ipxe.efi",
+		},
+		{
+			name: "unknown arch",
+			arch: "riscv", allowPXE: true,
+		},
+		{
+			name: "unknown firmware",
+			arch: "coreboot", allowPXE: true,
+		},
 	}
 
 	for i, tt := range getPXEFilenameTests {
 		t.Run(tt.name, func(t *testing.T) {
-			t.Logf("index=%d iState=%q allowPXE=%v ouriPXE=%v arch=%v platfrom=%v filename=%q",
+			t.Logf("index=%d iState=%q allowPXE=%v ouriPXE=%v arch=%v platform=%v filename=%q",
 				i, tt.iState, tt.allowPXE, tt.ouriPXE, tt.arch, tt.firmware, tt.filename)
 
 			instance := &packet.Instance{

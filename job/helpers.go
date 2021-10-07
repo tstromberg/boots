@@ -71,7 +71,7 @@ func (j Job) InstanceID() string {
 	return ""
 }
 
-// UserData returns instance.UserData
+// UserData returns instance.UserData.
 func (j Job) UserData() string {
 	if i := j.instance; i != nil {
 		return i.UserData
@@ -80,7 +80,7 @@ func (j Job) UserData() string {
 	return ""
 }
 
-// IPXEScriptURL returns the value of instance.IPXEScriptURL
+// IPXEScriptURL returns the value of instance.IPXEScriptURL.
 func (j Job) IPXEScriptURL() string {
 	if i := j.instance; i != nil {
 		return i.IPXEScriptURL
@@ -98,7 +98,7 @@ func (j Job) InstanceIPs() []packet.IP {
 }
 
 // PasswordHash will return the password hash from the job instance if it exists
-// PasswordHash first tries returning CryptedRootPassword if it exists and falls back to returning PasswordHash
+// PasswordHash first tries returning CryptedRootPassword if it exists and falls back to returning PasswordHash.
 func (j Job) PasswordHash() string {
 	if j.instance == nil {
 		return ""
@@ -191,12 +191,12 @@ func (j Job) Manufacturer() string {
 	return ""
 }
 
-// PrimaryNIC returns the mac address of the NIC we expect to be dhcp/pxe'ing
+// PrimaryNIC returns the mac address of the NIC we expect to be dhcp/pxe'ing.
 func (j Job) PrimaryNIC() net.HardwareAddr {
 	return j.mac
 }
 
-// HardwareState will return (enrolled burn_in preinstallable preinstalling failed_preinstall provisionable provisioning deprovisioning in_use)
+// HardwareState will return (enrolled burn_in preinstallable preinstalling failed_preinstall provisionable provisioning deprovisioning in_use).
 func (j Job) HardwareState() string {
 	if h := j.hardware; h != nil && h.HardwareID() != "" {
 		return string(h.HardwareState())
@@ -205,7 +205,7 @@ func (j Job) HardwareState() string {
 	return ""
 }
 
-// OSIEVersion returns any non-standard osie versions specified in either the instance proper or in userdata or attached to underlying hardware
+// OSIEVersion returns any non-standard osie versions specified in either the instance proper or in userdata or attached to underlying hardware.
 func (j Job) OSIEVersion() string {
 	if i := j.instance; i != nil {
 		ov := i.ServicesVersion().OSIE
@@ -221,7 +221,7 @@ func (j Job) OSIEVersion() string {
 	return h.HardwareOSIEVersion()
 }
 
-// CanWorkflow checks if workflow is allowed
+// CanWorkflow checks if workflow is allowed.
 func (j Job) CanWorkflow() bool {
 	return j.hardware.HardwareAllowWorkflow(j.mac)
 }

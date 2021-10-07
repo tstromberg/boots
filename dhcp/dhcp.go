@@ -10,6 +10,7 @@ type Reply interface {
 	Send() error
 }
 
+//nolint:exhaustive // missing cases in switch of type dhcp4.MessageType
 func NewReply(w dhcp4.ReplyWriter, req *dhcp4.Packet) Reply {
 	switch req.GetMessageType() {
 	case dhcp4.MessageTypeDiscover:

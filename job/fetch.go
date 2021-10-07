@@ -8,9 +8,7 @@ import (
 	"github.com/tinkerbell/boots/packet"
 )
 
-var (
-	servers singleflight.Group
-)
+var servers singleflight.Group
 
 func discoverHardwareFromDHCP(ctx context.Context, mac net.HardwareAddr, giaddr net.IP, circuitID string) (packet.Discovery, error) {
 	fetch := func() (interface{}, error) {

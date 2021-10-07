@@ -1,3 +1,4 @@
+//nolint:var-naming // variable names are auto-generated
 package packet
 
 import (
@@ -13,13 +14,13 @@ import (
 
 // models_tinkerbell.go contains the interface methods specific to DiscoveryTinkerbell and HardwareTinkerbell structs
 
-// DiscoveryTinkerbellV1 presents the structure for tinkerbell's new data model, version 1
+// DiscoveryTinkerbellV1 presents the structure for tinkerbell's new data model, version 1.
 type DiscoveryTinkerbellV1 struct {
 	*HardwareTinkerbellV1
 	mac net.HardwareAddr
 }
 
-// HardwareTinkerbellV1 represents the new hardware data model for tinkerbell, version 1
+// HardwareTinkerbellV1 represents the new hardware data model for tinkerbell, version 1.
 type HardwareTinkerbellV1 struct {
 	ID       string   `json:"id"`
 	Network  Network  `json:"network"`
@@ -46,7 +47,7 @@ func (d DiscoveryTinkerbellV1) Hardware() Hardware {
 	return h
 }
 
-func (d DiscoveryTinkerbellV1) DnsServers(mac net.HardwareAddr) []net.IP {
+func (d DiscoveryTinkerbellV1) DNSServers(mac net.HardwareAddr) []net.IP {
 	dnsServers := d.Network.InterfaceByMac(mac).DHCP.NameServers
 	if len(dnsServers) == 0 {
 		return conf.DNSServers
@@ -68,18 +69,15 @@ func (d DiscoveryTinkerbellV1) Mode() string {
 }
 
 func (d DiscoveryTinkerbellV1) GetIP(mac net.HardwareAddr) IP {
-	//if i := d.Network.Interface(mac); i.DHCP.IP.Address != nil {
-	//	return i.DHCP.IP
-	//}
 	return d.Network.InterfaceByMac(mac).DHCP.IP
 }
 
 func (d DiscoveryTinkerbellV1) GetMAC(ip net.IP) net.HardwareAddr {
-	return d.Network.InterfaceByIp(ip).DHCP.MAC.HardwareAddr()
+	return d.Network.InterfaceByIP(ip).DHCP.MAC.HardwareAddr()
 }
 
-// InterfacesByMac returns the NetworkInterface that contains the matching mac address
-// returns an empty NetworkInterface if not found
+// InterfacesByMAC returns the NetworkInterface that contains the matching mac address
+// returns an empty NetworkInterface if not found.
 func (n Network) InterfaceByMac(mac net.HardwareAddr) NetworkInterface {
 	for _, i := range n.Interfaces {
 		if i.DHCP.MAC.String() == mac.String() {
@@ -90,9 +88,9 @@ func (n Network) InterfaceByMac(mac net.HardwareAddr) NetworkInterface {
 	return NetworkInterface{}
 }
 
-// InterfacesByIp returns the NetworkInterface that contains the matching ip address
-// returns an empty NetworkInterface if not found
-func (n Network) InterfaceByIp(ip net.IP) NetworkInterface {
+// InterfacesByIP returns the NetworkInterface that contains the matching ip address
+// returns an empty NetworkInterface if not found.
+func (n Network) InterfaceByIP(ip net.IP) NetworkInterface {
 	for _, i := range n.Interfaces {
 		if i.DHCP.IP.Address.String() == ip.String() {
 			return i
@@ -150,10 +148,6 @@ func (h HardwareTinkerbellV1) HardwareIPs() []IP {
 	return hips
 }
 
-//func (h HardwareTinkerbellV1) HardwareIPMI() net.IP {
-//	return h.DHCP.IP // is this correct?
-//}
-
 func (h HardwareTinkerbellV1) HardwareProvisioner() string {
 	return h.Metadata.ProvisionerEngine
 }
@@ -174,7 +168,7 @@ func (h HardwareTinkerbellV1) HardwareState() HardwareState {
 	return h.Metadata.State
 }
 
-// dummy method for backward compatibility
+// dummy method for backward compatibility.
 func (h HardwareTinkerbellV1) HardwareOSIEVersion() string {
 	return ""
 }

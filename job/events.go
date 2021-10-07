@@ -6,6 +6,7 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"fmt"
 	"strings"
 
 	"github.com/pkg/errors"
@@ -126,6 +127,7 @@ func (j Job) phoneHome(ctx context.Context, body []byte) bool {
 
 	return true
 }
+
 func (j Job) postEvent(ctx context.Context, kind, body string, private bool) bool {
 	if j.InstanceID() == "" {
 		j.With("kind", kind).Error(errors.New("postEvent called for nil instance"))
@@ -213,37 +215,38 @@ func (e *event) post(ctx context.Context, endpoint, id string) error {
 		return client.PostInstancePassword(ctx, id, e.pass)
 	}
 
-	if endpoint == "hardware" {
+	var err error
+
+	switch endpoint {
+	case "hardware":
 		if e._kind == "phone-home" {
 			return client.PostHardwarePhoneHome(ctx, id)
-		} else {
-			var err error
-			e._id, err = client.PostHardwareEvent(ctx, id, bytes.NewReader(e.json))
-
-			return err
 		}
-	} else if endpoint == "instance" {
+		e._id, err = client.PostHardwareEvent(ctx, id, bytes.NewReader(e.json))
+		return err
+	case "instance":
 		if e._kind == "phone-home" {
 			return client.PostInstancePhoneHome(ctx, id)
-		} else {
-			var err error
-			e._id, err = client.PostInstanceEvent(ctx, id, bytes.NewReader(e.json))
-
-			return err
 		}
+		e._id, err = client.PostInstanceEvent(ctx, id, bytes.NewReader(e.json))
+		return err
+	default:
+		return fmt.Errorf("unknown endpoint: %q", endpoint)
 	}
-
-	return errors.New("unknown endpoint: " + endpoint)
 }
+
 func (e *event) postInstance(ctx context.Context, id string) (err error) {
 	return e.post(ctx, "instance", id)
 }
+
 func (e *event) postHardware(ctx context.Context, id string) (err error) {
 	return e.post(ctx, "hardware", id)
 }
+
 func (e *event) kind() string {
 	return e._kind
 }
+
 func (e *event) id() string {
 	return e._id
 }
@@ -254,7 +257,6 @@ type failure struct {
 }
 
 func (f *failure) post(ctx context.Context, typ, id string) error {
-
 	if id == "" {
 		return errors.New("missing id")
 	}
@@ -272,15 +274,19 @@ func (f *failure) post(ctx context.Context, typ, id string) error {
 
 	return errors.New("unknown type: " + typ)
 }
+
 func (f *failure) postInstance(ctx context.Context, id string) error {
 	return f.post(ctx, "instance", id)
 }
+
 func (f *failure) postHardware(ctx context.Context, id string) error {
 	return f.post(ctx, "hardware", id)
 }
+
 func (f *failure) kind() string {
 	return "failure"
 }
+
 func (f *failure) id() string {
 	return "no-id"
 }

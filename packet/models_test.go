@@ -15,6 +15,7 @@ import (
 func TestInterfaces(t *testing.T) {
 	var _ Discovery = &DiscoveryCacher{}
 	var _ Discovery = &DiscoveryTinkerbellV1{}
+	t.Logf("interface test works")
 }
 
 func TestNewDiscoveryCacher(t *testing.T) {
@@ -132,7 +133,7 @@ func TestDiscoveryCacher(t *testing.T) {
 			t.Logf("PrimaryDataMac: %s", d.PrimaryDataMAC().HardwareAddr().String())
 			t.Logf("MAC: %v", d.MAC())
 			t.Logf("mac: %s", mac.String())
-			t.Logf("hardware IP: %v", d.hardwareIP())
+			t.Logf("hardware IP: %v", d.privateIP())
 			t.Log()
 			h := d.Hardware()
 			for _, ip := range h.HardwareIPs() {
@@ -212,8 +213,8 @@ func TestDiscoveryTinkerbell(t *testing.T) {
 			if d.Network.InterfaceByMac(mac).DHCP.IP.Address.String() != test.ip.Address.String() {
 				t.Fatalf("unexpected ip, want: %v, got: %v", test.ip, d.Network.InterfaceByMac(mac).DHCP.IP)
 			}
-			if d.Network.InterfaceByIp(test.ip.Address).DHCP.MAC.String() != mac.String() {
-				t.Fatalf("unexpected mac, want: %s, got: %s", mac, d.Network.InterfaceByIp(test.ip.Address).DHCP.MAC)
+			if d.Network.InterfaceByIP(test.ip.Address).DHCP.MAC.String() != mac.String() {
+				t.Fatalf("unexpected mac, want: %s, got: %s", mac, d.Network.InterfaceByIP(test.ip.Address).DHCP.MAC)
 			}
 			if d.Network.InterfaceByMac(mac).DHCP.Hostname != test.hostname {
 				t.Fatalf("unexpected hostname, want: %s, got: %s", test.hostname, d.Network.InterfaceByMac(mac).DHCP.Hostname)
@@ -371,7 +372,7 @@ var tinkerbellTests = map[string]struct {
 		arch:        "x86_64",
 		uefi:        false,
 		mode:        "hardware",
-		json:        newJsonStruct,
+		json:        newJSONStruct,
 	},
 	"new_structure_defaults": {
 		id:  "fde7c87c-d154-448e-9fce-7eb7bdec90c0",
@@ -388,7 +389,7 @@ var tinkerbellTests = map[string]struct {
 		arch:        "x86_64",
 		uefi:        false,
 		mode:        "hardware",
-		json:        newJsonStructUseDefaults,
+		json:        newJSONStructUseDefaults,
 	},
 	"full structure tinkerbell": {
 		id:  "0eba0bf8-3772-4b4a-ab9f-6ebe93b90a94",
@@ -533,9 +534,9 @@ var cacherTests = map[string]struct {
 	},
 }
 
-// use vim's (or equivalent) `!jq -S` on these strings
+// use vim's (or equivalent) `!jq -S` on these strings.
 const (
-	newJsonStructUseDefaults = `
+	newJSONStructUseDefaults = `
 {
   "id": "fde7c87c-d154-448e-9fce-7eb7bdec90c0",
   "network": {
@@ -574,7 +575,7 @@ const (
   }
 }
 `
-	newJsonStruct = `
+	newJSONStruct = `
 {
   "id": "fde7c87c-d154-447e-9fce-7eb7bdec90c0",
   "metadata": {

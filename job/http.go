@@ -49,13 +49,17 @@ func (j Job) ServePhoneHomeEndpoint(w http.ResponseWriter, req *http.Request) {
 			return
 		}
 
-		post_data := map[string]string{}
+		data := map[string]string{}
 		for key, value := range req.PostForm {
-			post_data[key] = value[0]
+			data[key] = value[0]
 		}
 
 		buf := new(bytes.Buffer)
-		json.NewEncoder(buf).Encode(post_data)
+		if err := json.NewEncoder(buf).Encode(data); err != nil {
+			j.Error(errors.Wrap(err, "encoding post data"))
+			w.WriteHeader(http.StatusInternalServerError)
+			return
+		}
 		b = buf.Bytes()
 	default:
 		// Any other content types equal a bad request
@@ -67,7 +71,9 @@ func (j Job) ServePhoneHomeEndpoint(w http.ResponseWriter, req *http.Request) {
 	j.phoneHome(req.Context(), b)
 
 	w.WriteHeader(http.StatusOK)
-	w.Write([]byte{})
+	if _, err := w.Write([]byte{}); err != nil {
+		j.Error(errors.Wrap(err, "write"))
+	}
 }
 
 func (j Job) ServeProblemEndpoint(w http.ResponseWriter, req *http.Request) {
@@ -93,7 +99,9 @@ func (j Job) ServeProblemEndpoint(w http.ResponseWriter, req *http.Request) {
 		return
 	}
 	w.WriteHeader(http.StatusOK)
-	w.Write([]byte{})
+	if _, err := w.Write([]byte{}); err != nil {
+		j.Error(errors.Wrap(err, "write failed"))
+	}
 }
 
 func readClose(r io.ReadCloser) (b []byte, err error) {

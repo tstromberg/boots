@@ -24,12 +24,11 @@ import (
 	"github.com/tinkerbell/boots/installers/vmware"
 	"github.com/tinkerbell/boots/job"
 	"github.com/tinkerbell/boots/metrics"
+	"github.com/tinkerbell/boots/packet"
 	"go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp"
 )
 
-var (
-	httpAddr = conf.HTTPBind
-)
+var httpAddr = conf.HTTPBind
 
 func init() {
 	flag.StringVar(&httpAddr, "http-addr", httpAddr, "IP and port to listen on for HTTP.")
@@ -53,12 +52,14 @@ func serveHealthchecker(rev string, start time.Time) http.HandlerFunc {
 			mainlog.Error(errors.Wrap(err, "marshaling healtcheck json"))
 		}
 		w.Header().Set("Content-Type", "application/json")
-		w.Write(b)
+		if _, err := w.Write(b); err != nil {
+			mainlog.Error(err, "writing healthcheck response")
+		}
 	}
 }
 
 // otelFuncWrapper takes a route and an http handler function, wraps the function
-// with otelhttp, and returns the route again and http.Handler all set for mux.Handle()
+// with otelhttp, and returns the route again and http.Handler all set for mux.Handle().
 func otelFuncWrapper(route string, h func(w http.ResponseWriter, req *http.Request)) (string, http.Handler) {
 	return route, otelhttp.WithRouteTag(route, http.HandlerFunc(h))
 }
@@ -70,7 +71,7 @@ type jobHandler struct {
 // ServeHTTP sets up all the HTTP routes using a stdlib mux and starts the http
 // server, which will block. App functionality is instrumented in Prometheus and
 // OpenTelemetry. Optionally configures X-Forwarded-For support.
-func ServeHTTP(i job.Installers) {
+func ServeHTTP(c *packet.Client, i job.Installers) {
 	mux := http.NewServeMux()
 	s := jobHandler{i: i}
 	mux.Handle(otelFuncWrapper("/", s.serveJobFile))
@@ -89,7 +90,7 @@ func ServeHTTP(i job.Installers) {
 
 	// Events endpoint used to forward customer generated custom events from a running device (instance) to packet API
 	mux.Handle(otelFuncWrapper("/events", func(w http.ResponseWriter, req *http.Request) {
-		code, err := serveEvents(client, w, req)
+		code, err := serveEvents(c, w, req)
 		if err == nil {
 			return
 		}
@@ -98,7 +99,7 @@ func ServeHTTP(i job.Installers) {
 		}
 	}))
 
-	var httpHandlers = make(map[string]http.HandlerFunc)
+	httpHandlers := make(map[string]http.HandlerFunc)
 	// register coreos/flatcar endpoints
 	httpHandlers[coreos.IgnitionPathCoreos] = coreos.ServeIgnitionConfig("coreos")
 	httpHandlers[coreos.IgnitionPathFlatcar] = coreos.ServeIgnitionConfig("flatcar")
@@ -108,7 +109,7 @@ func ServeHTTP(i job.Installers) {
 
 	// register Installer handlers
 	for path, fn := range httpHandlers {
-		mux.Handle(path, otelhttp.WithRouteTag(path, http.HandlerFunc(fn)))
+		mux.Handle(path, otelhttp.WithRouteTag(path, fn))
 	}
 
 	// wrap the mux with an OpenTelemetry interceptor
@@ -270,7 +271,7 @@ type eventsServer interface {
 	PostInstanceEvent(context.Context, string, io.Reader) (string, error)
 }
 
-// Forward user generated events to Packet API
+// Forward user generated events to Packet API.
 func serveEvents(client eventsServer, w http.ResponseWriter, req *http.Request) (int, error) {
 	host, _, err := net.SplitHostPort(req.RemoteAddr)
 	if err != nil {
@@ -341,7 +342,10 @@ func serveEvents(client eventsServer, w http.ResponseWriter, req *http.Request) 
 	}
 
 	w.WriteHeader(http.StatusOK)
-	w.Write([]byte{})
+	if _, err := w.Write([]byte{}); err != nil {
+		mainlog.With("client", req.RemoteAddr).Error(err, "write failed")
+		return http.StatusInternalServerError, nil
+	}
 
 	return http.StatusOK, nil
 }

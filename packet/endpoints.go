@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"fmt"
 	"io"
 	"net"
 	"os"
@@ -34,8 +35,8 @@ type ComponentsResponse struct {
 	Components []Component `json:"components"`
 }
 
-// GetWorkflowsFromTink fetches the list of workflows from tink
-func (c *client) GetWorkflowsFromTink(ctx context.Context, hwID HardwareID) (result *tw.WorkflowContextList, err error) {
+// GetWorkflowsFromTink fetches the list of workflows from tink.
+func (c *Client) GetWorkflowsFromTink(ctx context.Context, hwID HardwareID) (result *tw.WorkflowContextList, err error) {
 	if hwID == "" {
 		return result, errors.New("missing hardware id")
 	}
@@ -57,7 +58,7 @@ func (c *client) GetWorkflowsFromTink(ctx context.Context, hwID HardwareID) (res
 	return result, nil
 }
 
-func (c *client) DiscoverHardwareFromDHCP(ctx context.Context, mac net.HardwareAddr, giaddr net.IP, circuitID string) (Discovery, error) {
+func (c *Client) DiscoverHardwareFromDHCP(ctx context.Context, mac net.HardwareAddr, giaddr net.IP, circuitID string) (Discovery, error) {
 	if mac == nil {
 		return nil, errors.New("missing MAC address")
 	}
@@ -69,7 +70,11 @@ func (c *client) DiscoverHardwareFromDHCP(ctx context.Context, mac net.HardwareA
 	dataModelVersion := os.Getenv("DATA_MODEL_VERSION")
 	switch dataModelVersion {
 	case "":
-		cc := c.hardwareClient.(cacher.CacherClient)
+		cc, ok := c.hardwareClient.(cacher.CacherClient)
+		if !ok {
+			return nil, fmt.Errorf("type assertion to CacherClient failed, hardwareClient is %T", c.hardwareClient)
+		}
+
 		msg := &cacher.GetRequest{
 			MAC: mac.String(),
 		}
@@ -88,11 +93,14 @@ func (c *client) DiscoverHardwareFromDHCP(ctx context.Context, mac net.HardwareA
 			metrics.CacherCacheHits.With(labels).Inc()
 
 			return NewDiscovery(b)
-		} else {
-			return c.ReportDiscovery(ctx, mac, giaddr, circuitID)
 		}
+		return c.ReportDiscovery(ctx, mac, giaddr, circuitID)
 	case "1":
-		tc := c.hardwareClient.(tink.HardwareServiceClient)
+		tc, ok := c.hardwareClient.(tink.HardwareServiceClient)
+		if !ok {
+			return nil, fmt.Errorf("type assertion to HardwareServiceClient failed, hardwareClient is %T", c.hardwareClient)
+		}
+
 		msg := &tink.GetRequest{
 			Mac: mac.String(),
 		}
@@ -121,7 +129,11 @@ func (c *client) DiscoverHardwareFromDHCP(ctx context.Context, mac net.HardwareA
 
 		return nil, errors.New("not found")
 	case "standalone":
-		sc := c.hardwareClient.(StandaloneClient)
+		sc, ok := c.hardwareClient.(StandaloneClient)
+		if !ok {
+			return nil, fmt.Errorf("type assertion to StandaloneClient failed, hardwareClient is %T", c.hardwareClient)
+		}
+
 		for _, v := range sc.db {
 			if v.MAC().String() == mac.String() {
 				return v, nil
@@ -139,7 +151,7 @@ func (c *client) DiscoverHardwareFromDHCP(ctx context.Context, mac net.HardwareA
 // endpoint.
 // This was split out from DiscoverHardwareFromDHCP to make the control flow
 // easier to understand.
-func (c *client) ReportDiscovery(ctx context.Context, mac net.HardwareAddr, giaddr net.IP, circuitID string) (Discovery, error) {
+func (c *Client) ReportDiscovery(ctx context.Context, mac net.HardwareAddr, giaddr net.IP, circuitID string) (Discovery, error) {
 	if giaddr == nil {
 		return nil, errors.New("missing MAC address")
 	}
@@ -176,7 +188,7 @@ func (c *client) ReportDiscovery(ctx context.Context, mac net.HardwareAddr, giad
 	return &res, nil
 }
 
-func (c *client) DiscoverHardwareFromIP(ctx context.Context, ip net.IP) (Discovery, error) {
+func (c *Client) DiscoverHardwareFromIP(ctx context.Context, ip net.IP) (Discovery, error) {
 	if ip.String() == net.IPv4zero.String() {
 		return nil, errors.New("missing ip address")
 	}
@@ -191,7 +203,11 @@ func (c *client) DiscoverHardwareFromIP(ctx context.Context, ip net.IP) (Discove
 	dataModelVersion := os.Getenv("DATA_MODEL_VERSION")
 	switch dataModelVersion {
 	case "":
-		cc := c.hardwareClient.(cacher.CacherClient)
+		cc, ok := c.hardwareClient.(cacher.CacherClient)
+		if !ok {
+			return nil, fmt.Errorf("type assertion to CacherClient failed, hardwareClient is %T", c.hardwareClient)
+		}
+
 		msg := &cacher.GetRequest{
 			IP: ip.String(),
 		}
@@ -207,7 +223,11 @@ func (c *client) DiscoverHardwareFromIP(ctx context.Context, ip net.IP) (Discove
 
 		b = []byte(resp.JSON)
 	case "1":
-		tc := c.hardwareClient.(tink.HardwareServiceClient)
+		tc, ok := c.hardwareClient.(tink.HardwareServiceClient)
+		if !ok {
+			return nil, fmt.Errorf("type assertion to HardwareServiceClient failed, hardwareClient is %T", c.hardwareClient)
+		}
+
 		msg := &tink.GetRequest{
 			Ip: ip.String(),
 		}
@@ -226,7 +246,11 @@ func (c *client) DiscoverHardwareFromIP(ctx context.Context, ip net.IP) (Discove
 			return nil, errors.New("marshalling tink hardware")
 		}
 	case "standalone":
-		sc := c.hardwareClient.(StandaloneClient)
+		sc, ok := c.hardwareClient.(StandaloneClient)
+		if !ok {
+			return nil, fmt.Errorf("type assertion to StandaloneClient failed, hardwareClient is %T", c.hardwareClient)
+		}
+
 		for _, v := range sc.db {
 			for _, hip := range v.HardwareIPs() {
 				if hip.Address.Equal(ip) {
@@ -241,8 +265,8 @@ func (c *client) DiscoverHardwareFromIP(ctx context.Context, ip net.IP) (Discove
 	return NewDiscovery(b)
 }
 
-// GetDeviceIDFromIP Looks up a device (instance) in cacher via ByIP
-func (c *client) GetInstanceIDFromIP(ctx context.Context, dip net.IP) (string, error) {
+// GetDeviceIDFromIP Looks up a device (instance) in cacher via ByIP.
+func (c *Client) GetInstanceIDFromIP(ctx context.Context, dip net.IP) (string, error) {
 	d, err := c.DiscoverHardwareFromIP(ctx, dip)
 	if err != nil {
 		return "", err
@@ -254,8 +278,8 @@ func (c *client) GetInstanceIDFromIP(ctx context.Context, dip net.IP) (string, e
 	return d.Instance().ID, nil
 }
 
-// PostHardwareComponent - POSTs a HardwareComponent to the API
-func (c *client) PostHardwareComponent(ctx context.Context, hardwareID HardwareID, body io.Reader) (*ComponentsResponse, error) {
+// PostHardwareComponent - POSTs a HardwareComponent to the API.
+func (c *Client) PostHardwareComponent(ctx context.Context, hardwareID HardwareID, body io.Reader) (*ComponentsResponse, error) {
 	var response ComponentsResponse
 
 	if err := c.Post(ctx, "/hardware/"+hardwareID.String()+"/components", mimeJSON, body, &response); err != nil {
@@ -264,7 +288,8 @@ func (c *client) PostHardwareComponent(ctx context.Context, hardwareID HardwareI
 
 	return &response, nil
 }
-func (c *client) PostHardwareEvent(ctx context.Context, id string, body io.Reader) (string, error) {
+
+func (c *Client) PostHardwareEvent(ctx context.Context, id string, body io.Reader) (string, error) {
 	var res struct {
 		ID string `json:"id"`
 	}
@@ -274,13 +299,16 @@ func (c *client) PostHardwareEvent(ctx context.Context, id string, body io.Reade
 
 	return res.ID, nil
 }
-func (c *client) PostHardwarePhoneHome(ctx context.Context, id string) error {
+
+func (c *Client) PostHardwarePhoneHome(ctx context.Context, id string) error {
 	return c.Post(ctx, "/hardware/"+id+"/phone-home", "", nil, nil)
 }
-func (c *client) PostHardwareFail(ctx context.Context, id string, body io.Reader) error {
+
+func (c *Client) PostHardwareFail(ctx context.Context, id string, body io.Reader) error {
 	return c.Post(ctx, "/hardware/"+id+"/fail", mimeJSON, body, nil)
 }
-func (c *client) PostHardwareProblem(ctx context.Context, id HardwareID, body io.Reader) (string, error) {
+
+func (c *Client) PostHardwareProblem(ctx context.Context, id HardwareID, body io.Reader) (string, error) {
 	var res struct {
 		ID string `json:"id"`
 	}
@@ -291,10 +319,11 @@ func (c *client) PostHardwareProblem(ctx context.Context, id HardwareID, body io
 	return res.ID, nil
 }
 
-func (c *client) PostInstancePhoneHome(ctx context.Context, id string) error {
+func (c *Client) PostInstancePhoneHome(ctx context.Context, id string) error {
 	return c.Post(ctx, "/devices/"+id+"/phone-home", "", nil, nil)
 }
-func (c *client) PostInstanceEvent(ctx context.Context, id string, body io.Reader) (string, error) {
+
+func (c *Client) PostInstanceEvent(ctx context.Context, id string, body io.Reader) (string, error) {
 	var res struct {
 		ID string `json:"id"`
 	}
@@ -304,11 +333,13 @@ func (c *client) PostInstanceEvent(ctx context.Context, id string, body io.Reade
 
 	return res.ID, nil
 }
-func (c *client) PostInstanceFail(ctx context.Context, id string, body io.Reader) error {
+
+func (c *Client) PostInstanceFail(ctx context.Context, id string, body io.Reader) error {
 	return c.Post(ctx, "/devices/"+id+"/fail", mimeJSON, body, nil)
 }
-func (c *client) PostInstancePassword(ctx context.Context, id, pass string) error {
-	var req = struct {
+
+func (c *Client) PostInstancePassword(ctx context.Context, id, pass string) error {
+	req := struct {
 		Password string `json:"password"`
 	}{
 		Password: pass,
@@ -321,6 +352,7 @@ func (c *client) PostInstancePassword(ctx context.Context, id, pass string) erro
 
 	return c.Post(ctx, "/devices/"+id+"/password", mimeJSON, bytes.NewReader(b), nil)
 }
-func (c *client) UpdateInstance(ctx context.Context, id string, body io.Reader) error {
+
+func (c *Client) UpdateInstance(ctx context.Context, id string, body io.Reader) error {
 	return c.Patch(ctx, "/devices/"+id, mimeJSON, body, nil)
 }

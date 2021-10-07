@@ -5,7 +5,6 @@ import (
 	"encoding/json"
 	"io"
 	"io/ioutil"
-	"net"
 	"net/http"
 	"net/url"
 	"os"
@@ -21,33 +20,10 @@ import (
 	"go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp"
 )
 
-type hardwareGetter interface {
-}
+type hardwareGetter interface{}
 
-type Client interface {
-	GetWorkflowsFromTink(context.Context, HardwareID) (*tw.WorkflowContextList, error)
-	DiscoverHardwareFromDHCP(ctx context.Context, mac net.HardwareAddr, giaddr net.IP, circuitID string) (Discovery, error)
-	ReportDiscovery(ctx context.Context, mac net.HardwareAddr, giaddr net.IP, circuitID string) (Discovery, error)
-
-	DiscoverHardwareFromIP(ctx context.Context, ip net.IP) (Discovery, error)
-	PostHardwareComponent(ctx context.Context, hardwareID HardwareID, body io.Reader) (*ComponentsResponse, error)
-	PostHardwareEvent(ctx context.Context, id string, body io.Reader) (string, error)
-	PostHardwarePhoneHome(ctx context.Context, id string) error
-	PostHardwareFail(ctx context.Context, id string, body io.Reader) error
-	PostHardwareProblem(ctx context.Context, id HardwareID, body io.Reader) (string, error)
-
-	GetInstanceIDFromIP(ctx context.Context, dip net.IP) (string, error)
-	PostInstancePhoneHome(context.Context, string) error
-	PostInstanceEvent(ctx context.Context, id string, body io.Reader) (string, error)
-	PostInstanceFail(ctx context.Context, id string, body io.Reader) error
-	PostInstancePassword(ctx context.Context, id, pass string) error
-	UpdateInstance(ctx context.Context, id string, body io.Reader) error
-}
-
-var _ Client = &client{}
-
-// client has all the fields corresponding to connection
-type client struct {
+// client has all the fields corresponding to connection.
+type Client struct {
 	http           *http.Client
 	baseURL        *url.URL
 	consumerToken  string
@@ -57,7 +33,7 @@ type client struct {
 	logger         log.Logger
 }
 
-func NewClient(logger log.Logger, consumerToken, authToken string, baseURL *url.URL) (Client, error) {
+func NewClient(logger log.Logger, consumerToken, authToken string, baseURL *url.URL) (*Client, error) {
 	t, ok := http.DefaultTransport.(*http.Transport)
 	if !ok {
 		return nil, errors.New("unexpected type for http.DefaultTransport")
@@ -120,8 +96,9 @@ func NewClient(logger log.Logger, consumerToken, authToken string, baseURL *url.
 		if err != nil {
 			return nil, errors.Wrapf(err, "could not read file %q", saFile)
 		}
-		dsDb := []DiscoverStandalone{}
-		err = json.Unmarshal(saData, &dsDb)
+
+		ds := []DiscoverStandalone{}
+		err = json.Unmarshal(saData, &ds)
 		if err != nil {
 			return nil, errors.Wrapf(err, "unable to parse configuration file %q", saFile)
 		}
@@ -130,13 +107,13 @@ func NewClient(logger log.Logger, consumerToken, authToken string, baseURL *url.
 		// that is just the filename and parsed data structure
 		hg = StandaloneClient{
 			filename: saFile,
-			db:       dsDb,
+			db:       ds,
 		}
 	default:
 		return nil, errors.Errorf("invalid DATA_MODEL_VERSION: %q", dataModelVersion)
 	}
 
-	return &client{
+	return &Client{
 		http:           c,
 		baseURL:        baseURL,
 		consumerToken:  consumerToken,
@@ -147,7 +124,7 @@ func NewClient(logger log.Logger, consumerToken, authToken string, baseURL *url.
 	}, nil
 }
 
-func NewMockClient(baseURL *url.URL, workflowClient tw.WorkflowServiceClient) *client {
+func NewMockClient(baseURL *url.URL, workflowClient tw.WorkflowServiceClient) *Client {
 	t := &httplog.Transport{
 		RoundTripper: http.DefaultTransport,
 	}
@@ -155,14 +132,14 @@ func NewMockClient(baseURL *url.URL, workflowClient tw.WorkflowServiceClient) *c
 		Transport: t,
 	}
 
-	return &client{
+	return &Client{
 		http:           c,
 		workflowClient: workflowClient,
 		baseURL:        baseURL,
 	}
 }
 
-func (c *client) Do(ctx context.Context, req *http.Request, v interface{}) error {
+func (c *Client) Do(ctx context.Context, req *http.Request, v interface{}) error {
 	req = req.WithContext(ctx)
 	req.URL = c.baseURL.ResolveReference(req.URL)
 	c.addHeaders(req)
@@ -175,7 +152,7 @@ func (c *client) Do(ctx context.Context, req *http.Request, v interface{}) error
 	return unmarshalResponse(res, v)
 }
 
-func (c *client) Get(ctx context.Context, ref string, v interface{}) error {
+func (c *Client) Get(ctx context.Context, ref string, v interface{}) error {
 	req, err := http.NewRequest("GET", ref, nil)
 	if err != nil {
 		return errors.Wrap(err, "setup GET request")
@@ -184,7 +161,7 @@ func (c *client) Get(ctx context.Context, ref string, v interface{}) error {
 	return c.Do(ctx, req, v)
 }
 
-func (c *client) Patch(ctx context.Context, ref, mime string, body io.Reader, v interface{}) error {
+func (c *Client) Patch(ctx context.Context, ref, mime string, body io.Reader, v interface{}) error {
 	req, err := http.NewRequest("PATCH", ref, body)
 	if err != nil {
 		return errors.Wrap(err, "setup PATCH request")
@@ -196,8 +173,8 @@ func (c *client) Patch(ctx context.Context, ref, mime string, body io.Reader, v 
 	return c.Do(ctx, req, v)
 }
 
-func (c *client) Post(ctx context.Context, ref, mime string, body io.Reader, v interface{}) error {
-	req, err := http.NewRequest("POST", ref, body)
+func (c *Client) Post(ctx context.Context, ref, mime string, body io.Reader, v interface{}) error {
+	req, err := http.NewRequestWithContext(ctx, "POST", ref, body)
 	if err != nil {
 		return errors.Wrap(err, "setup POST request")
 	}
@@ -208,7 +185,7 @@ func (c *client) Post(ctx context.Context, ref, mime string, body io.Reader, v i
 	return c.Do(ctx, req, v)
 }
 
-func (c *client) addHeaders(req *http.Request) {
+func (c *Client) addHeaders(req *http.Request) {
 	h := req.Header
 	h.Set("X-Packet-Staff", "1")
 
@@ -221,9 +198,12 @@ func (c *client) addHeaders(req *http.Request) {
 	}
 }
 
-func unmarshalResponse(res *http.Response, result interface{}) error {
+func unmarshalResponse(res *http.Response, result interface{}) (err error) {
 	defer res.Body.Close()
-	defer io.Copy(ioutil.Discard, res.Body) // ensure all of the body is read so we can quickly reuse connection
+	// ensure all of the body is read so we can quickly reuse connection, but collect err
+	defer func() {
+		_, err = io.Copy(ioutil.Discard, res.Body)
+	}()
 
 	if res.StatusCode < 200 || res.StatusCode > 399 {
 		e := &httpError{
@@ -231,21 +211,14 @@ func unmarshalResponse(res *http.Response, result interface{}) error {
 		}
 		e.unmarshalErrors(res.Body)
 
-		return errors.Wrap(e, "unmarshalling response")
+		err = errors.Wrap(e, "unmarshalling response")
+		return
 	}
 
-	var err error
 	if result == nil {
 		return nil
 	}
 
 	err = errors.Wrap(json.NewDecoder(res.Body).Decode(result), "decode json body")
-	if err == nil {
-		return nil
-	}
-
-	return errors.Wrap(&httpError{
-		StatusCode: res.StatusCode,
-		Errors:     []error{err},
-	}, "unmarshalling response")
+	return
 }

@@ -19,6 +19,7 @@ var facility = func() string {
 }()
 
 func TestScript(t *testing.T) {
+	ctx := context.Background()
 	for typ, script := range type2Script {
 		t.Run(typ, func(t *testing.T) {
 			m := job.NewMock(t, typ, facility)
@@ -29,7 +30,8 @@ func TestScript(t *testing.T) {
 			s.Set("tinkerbell", "http://127.0.0.1")
 			s.Set("ipxe_cloud_config", "packet")
 			r := Installer{}
-			bs := r.BootScript()(context.Background(), m.Job(), s)
+			f := r.BootScript()
+			bs := f(ctx, m.Job(), s)
 			got := string(bs.Bytes())
 			if script != got {
 				t.Fatalf("%s bad iPxe script\nwant:\n%s\ngot:\n%s", typ, script, got)

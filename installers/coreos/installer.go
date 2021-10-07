@@ -87,6 +87,6 @@ func configureInstaller(j job.Job, u *ignition.SystemdUnit) {
 	u.Enable()
 }
 
-func configureNetworkService(j job.Job, u *ignition.SystemdUnit) {
+func configureNetworkService(_ job.Job, u *ignition.SystemdUnit) {
 	u.Enable()
 }

@@ -16,26 +16,25 @@ import (
 
 var servicesVersionUserdataRegex = regexp.MustCompile(`^\s*#\s*services\s*=\s*({.*})\s*$`)
 
-// BondingMode is the hardware bonding mode
+// BondingMode is the hardware bonding mode.
 type BondingMode int
 
-// Discovery interface is the base for cacher and tinkerbell hardware discovery
+// Discovery interface is the base for cacher and tinkerbell hardware discovery.
 type Discovery interface {
 	Instance() *Instance
 	MAC() net.HardwareAddr
 	Mode() string
 	GetIP(addr net.HardwareAddr) IP
 	GetMAC(ip net.IP) net.HardwareAddr
-	DnsServers(mac net.HardwareAddr) []net.IP
+	DNSServers(mac net.HardwareAddr) []net.IP
 	LeaseTime(mac net.HardwareAddr) time.Duration
 	Hostname() (string, error)
 	Hardware() Hardware
 	SetMAC(mac net.HardwareAddr)
 }
 
-// Interface is the base for cacher and tinkerbell hardware (network) interface
-type Interface interface {
-}
+// Interface is the base for cacher and tinkerbell hardware (network) interface.
+type Interface interface{}
 
 type InterfaceCacher struct {
 	*Port
@@ -51,7 +50,7 @@ func (hid HardwareID) String() string {
 	return string(hid)
 }
 
-// Hardware interface holds primary hardware methods
+// Hardware interface holds primary hardware methods.
 type Hardware interface {
 	HardwareAllowPXE(mac net.HardwareAddr) bool
 	HardwareAllowWorkflow(mac net.HardwareAddr) bool
@@ -74,7 +73,7 @@ type Hardware interface {
 	OperatingSystem() *OperatingSystem
 }
 
-// NewDiscovery instantiates a Discovery struct from the json argument
+// NewDiscovery instantiates a Discovery struct from the json argument.
 func NewDiscovery(b []byte) (Discovery, error) {
 	if string(b) == "" || string(b) == "{}" {
 		return nil, errors.New("empty response from db")
@@ -103,7 +102,7 @@ func NewDiscovery(b []byte) (Discovery, error) {
 	}
 }
 
-// Instance models the instance data as returned by the API
+// Instance models the instance data as returned by the API.
 type Instance struct {
 	ID       string        `json:"id"`
 	State    InstanceState `json:"state"`
@@ -135,12 +134,12 @@ type Instance struct {
 	BootDriveHint string `json:"boot_drive_hint,omitempty"`
 }
 
-// Device Full device result from /devices endpoint
+// Device Full device result from /devices endpoint.
 type Device struct {
 	ID string `json:"id"`
 }
 
-// FindIP returns IP for an instance, nil otherwise
+// FindIP returns IP for an instance, nil otherwise.
 func (i *Instance) FindIP(pred func(IP) bool) *IP {
 	for _, ip := range i.IPs {
 		if pred(ip) {
@@ -187,7 +186,7 @@ func managementPrivateIPv4IP(ip IP) bool {
 	return !ip.Public && ip.Management && ip.Family == 4
 }
 
-// InstanceState represents the state of an instance (e.g. active)
+// InstanceState represents the state of an instance (e.g. active).
 type InstanceState string
 
 type Event struct {
@@ -206,10 +205,10 @@ type ServicesVersion struct {
 	OSIE string `json:"osie"`
 }
 
-// HardwareState is the hardware state (e.g. provisioning)
+// HardwareState is the hardware state (e.g. provisioning).
 type HardwareState string
 
-// IP represents IP address for a hardware
+// IP represents IP address for a hardware.
 type IP struct {
 	Address    net.IP `json:"address"`
 	Netmask    net.IP `json:"netmask"`
@@ -219,7 +218,7 @@ type IP struct {
 	Management bool   `json:"management"`
 }
 
-// OperatingSystem holds details for the operating system
+// OperatingSystem holds details for the operating system.
 type OperatingSystem struct {
 	Slug          string         `json:"slug"`
 	Distro        string         `json:"distro"`
@@ -236,7 +235,7 @@ type InstallerData struct {
 	Script string `json:"script,omitempty"`
 }
 
-// Port represents a network port
+// Port represents a network port.
 type Port struct {
 	ID   string   `json:"id"`
 	Type PortType `json:"type"`
@@ -247,7 +246,7 @@ type Port struct {
 	} `json:"data"`
 }
 
-// MAC returns the physical hardware address, nil otherwise
+// MAC returns the physical hardware address, nil otherwise.
 func (p *Port) MAC() net.HardwareAddr {
 	if p.Data.MAC != nil && *p.Data.MAC != ZeroMAC {
 		return p.Data.MAC.HardwareAddr()
@@ -256,10 +255,10 @@ func (p *Port) MAC() net.HardwareAddr {
 	return nil
 }
 
-// PortType is type for a network port
+// PortType is type for a network port.
 type PortType string
 
-// Manufacturer holds data for hardware manufacturer
+// Manufacturer holds data for hardware manufacturer.
 type Manufacturer struct {
 	ID   string `json:"id"`
 	Slug string `json:"slug"`
@@ -270,7 +269,7 @@ type NetworkInterface struct {
 	Netboot Netboot `json:"netboot,omitempty"`
 }
 
-// DHCP holds details for DHCP connection
+// DHCP holds details for DHCP connection.
 type DHCP struct {
 	MAC         *MACAddr `json:"mac"`
 	IP          IP       `json:"ip"`
@@ -283,7 +282,7 @@ type DHCP struct {
 	IfaceName   string   `json:"iface_name"` // to be removed?
 }
 
-// Netboot holds details for a hardware to boot over network
+// Netboot holds details for a hardware to boot over network.
 type Netboot struct {
 	AllowPXE      bool `json:"allow_pxe"`      // to be removed?
 	AllowWorkflow bool `json:"allow_workflow"` // to be removed?
@@ -294,20 +293,20 @@ type Netboot struct {
 	OSIE OSIE `json:"osie"`
 }
 
-// Bootstrapper is the bootstrapper to be used during netboot
+// Bootstrapper is the bootstrapper to be used during netboot.
 type OSIE struct {
 	BaseURL string `json:"base_url"`
 	Kernel  string `json:"kernel"`
 	Initrd  string `json:"initrd"`
 }
 
-// Network holds hardware network details
+// Network holds hardware network details.
 type Network struct {
 	Interfaces []NetworkInterface `json:"interfaces,omitempty"`
-	//Default    NetworkInterface   `json:"default,omitempty"`
+	// Default    NetworkInterface   `json:"default,omitempty"`
 }
 
-// Metadata holds the hardware metadata
+// Metadata holds the hardware metadata.
 type Metadata struct {
 	State        HardwareState `json:"state"`
 	BondingMode  BondingMode   `json:"bonding_mode"`
@@ -321,7 +320,7 @@ type Metadata struct {
 	ProvisionerEngine string   `json:"provisioner_engine"`
 }
 
-// Facility represents the facilty in use
+// Facility represents the facilty in use.
 type Facility struct {
 	PlanSlug        string `json:"plan_slug"`
 	PlanVersionSlug string `json:"plan_version_slug"`

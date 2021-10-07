@@ -71,14 +71,14 @@ func (t *Tarball) NewFile(name string, mode int64, kind byte) File {
 }
 
 func (t *Tarball) Close() error {
-	errTar := t.tw.Close()
-	errGZ := t.gz.Close()
-
-	if errTar != nil {
-		return errors.Wrap(errTar, "flushing and closing tar writer")
+	if err := t.tw.Close(); err != nil {
+		return errors.Wrap(err, "tarball close")
 	}
 
-	return errors.Wrap(errGZ, "flushing and closing gzip writer")
+	if err := t.gz.Close(); err != nil {
+		return errors.Wrap(err, "gz close")
+	}
+	return nil
 }
 
 func (t *Tarball) flush() error {
@@ -87,9 +87,13 @@ func (t *Tarball) flush() error {
 	}
 
 	t.hdr.Size = int64(t.buf.Len())
-	t.tw.WriteHeader(&t.hdr)
+	if err := t.tw.WriteHeader(&t.hdr); err != nil {
+		return errors.Wrap(err, "write header")
+	}
 
-	_, err := t.tw.Write(t.buf.Bytes())
+	if _, err := t.tw.Write(t.buf.Bytes()); err != nil {
+		return errors.Wrap(err, "write")
+	}
 
-	return errors.Wrap(err, "flush tarball")
+	return nil
 }

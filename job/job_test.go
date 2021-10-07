@@ -63,30 +63,27 @@ func TestSetupDiscover(t *testing.T) {
 	dh := d.Hardware()
 	h := dh.(*packet.HardwareCacher)
 
-	mode := d.Mode()
-
-	wantMode := "management"
-	if mode != wantMode {
-		t.Fatalf("incorect mode, want: %v, got: %v", wantMode, mode)
+	if mode := d.Mode(); mode != "management" {
+		t.Errorf("Mode = %q, want: %q", mode, "management")
 	}
 
 	dc := d.(*packet.DiscoveryCacher)
 	netConfig := dc.HardwareIPMI()
 	if !netConfig.Address.Equal(j.dhcp.Address()) {
-		t.Fatalf("incorrect Address, want: %v, got: %v", netConfig.Address, j.dhcp.Address())
+		t.Errorf("incorrect Address, want: %v, got: %v", netConfig.Address, j.dhcp.Address())
 	}
 	if !netConfig.Netmask.Equal(j.dhcp.Netmask()) {
-		t.Fatalf("incorrect Netmask, want: %v, got: %v", netConfig.Netmask, j.dhcp.Netmask())
+		t.Errorf("incorrect Netmask, want: %v, got: %v", netConfig.Netmask, j.dhcp.Netmask())
 	}
 	if !netConfig.Gateway.Equal(j.dhcp.Gateway()) {
-		t.Fatalf("incorrect Gateway, want: %v, got: %v", netConfig.Gateway, j.dhcp.Gateway())
+		t.Errorf("incorrect Gateway, want: %v, got: %v", netConfig.Gateway, j.dhcp.Gateway())
 	}
 	if h.Name != j.dhcp.Hostname() {
-		t.Fatalf("incorrect Hostname, want: %v, got: %v", h.Name, j.dhcp.Hostname())
+		t.Errorf("incorrect Hostname, want: %v, got: %v", h.Name, j.dhcp.Hostname())
 	}
 }
 
-// The easy way to differentiate between discovered hardware and enrolled/not-active hardware is by existence of PlanSLug
+// The easy way to differentiate between discovered hardware and enrolled/not-active hardware is by existence of PlanSLug.
 func TestSetupManagement(t *testing.T) {
 	macIPMI := packet.MACAddr([6]byte{0x00, 0xDE, 0xAD, 0xBE, 0xEF, 0x00})
 	var d packet.Discovery = &packet.DiscoveryCacher{
@@ -119,11 +116,8 @@ func TestSetupManagement(t *testing.T) {
 	j := &Job{mac: macIPMI.HardwareAddr()}
 	j.setup(d)
 
-	mode := d.Mode()
-
-	wantMode := "management"
-	if mode != wantMode {
-		t.Fatalf("incorect mode, want: %v, got: %v", wantMode, mode)
+	if mode := d.Mode(); mode != "management" {
+		t.Errorf("Mode = %q, want: %q", mode, "management")
 	}
 
 	dc := d.(*packet.DiscoveryCacher)
@@ -151,11 +145,8 @@ func TestSetupInstance(t *testing.T) {
 	j := &Job{mac: macs[1].HardwareAddr()}
 	j.setup(d)
 
-	mode := d.Mode()
-
-	wantMode := "instance"
-	if mode != wantMode {
-		t.Fatalf("incorect mode, want: %v, got: %v", wantMode, mode)
+	if mode := d.Mode(); mode != "instance" {
+		t.Fatalf("Mode = %q, want: %q", mode, "instance")
 	}
 
 	netConfig := d.GetIP(macs[1].HardwareAddr())
@@ -192,7 +183,8 @@ func TestHasActiveWorkflow(t *testing.T) {
 		wcl    *tw.WorkflowContextList
 		status bool
 	}{
-		{name: "test pending workflow",
+		{
+			name: "test pending workflow",
 			wcl: &tw.WorkflowContextList{
 				WorkflowContexts: []*tw.WorkflowContext{
 					{
@@ -203,7 +195,8 @@ func TestHasActiveWorkflow(t *testing.T) {
 			},
 			status: true,
 		},
-		{name: "test running workflow",
+		{
+			name: "test running workflow",
 			wcl: &tw.WorkflowContextList{
 				WorkflowContexts: []*tw.WorkflowContext{
 					{
@@ -214,7 +207,8 @@ func TestHasActiveWorkflow(t *testing.T) {
 			},
 			status: true,
 		},
-		{name: "test inactive workflow",
+		{
+			name: "test inactive workflow",
 			wcl: &tw.WorkflowContextList{
 				WorkflowContexts: []*tw.WorkflowContext{
 					{
@@ -247,7 +241,7 @@ func TestHasActiveWorkflow(t *testing.T) {
 			SetClient(c)
 			s, err := HasActiveWorkflow(context.Background(), "Hardware-fake-bde9-812726eff314")
 			if err != nil {
-				t.Fatal("error occured while testing")
+				t.Fatal("error occurred while testing")
 			}
 			assert.Equal(t, s, test.status)
 		})
@@ -259,8 +253,7 @@ func TestSetupWithoutInstance(t *testing.T) {
 	j := &Job{mac: mac.HardwareAddr()}
 	j.setup(d)
 
-	hostname, _ := d.Hostname()
-	if hostname != j.dhcp.Hostname() {
-		t.Fatalf("incorrect Hostname, want: %v, got: %v", hostname, j.dhcp.Hostname())
+	if h, _ := d.Hostname(); h != j.dhcp.Hostname() {
+		t.Fatalf("Hostname = %q, want: %q", h, j.dhcp.Hostname())
 	}
 }

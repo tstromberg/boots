@@ -84,8 +84,10 @@ func TestPhoneHome(t *testing.T) {
 	}
 }
 
-type req struct{ method, url, body string }
-type reqs []req
+type (
+	req  struct{ method, url, body string }
+	reqs []req
+)
 
 var phoneHomeTests = map[string]struct {
 	id    string

@@ -12,13 +12,13 @@ import (
 
 //go:generate mockgen -destination mock_cacher/cacher_mock.go github.com/packethost/cacher/protos/cacher CacherClient
 
-// DiscoveryCacher presents the structure for old data model
+// DiscoveryCacher presents the structure for old data model.
 type DiscoveryCacher struct {
 	*HardwareCacher
 	mac net.HardwareAddr
 }
 
-// HardwareCacher represents the old hardware data model for backward compatibility
+// HardwareCacher represents the old hardware data model for backward compatibility.
 type HardwareCacher struct {
 	ID    string        `json:"id"`
 	Name  string        `json:"name"`
@@ -49,7 +49,7 @@ func (d DiscoveryCacher) Hardware() Hardware {
 	return h
 }
 
-func (d DiscoveryCacher) DnsServers(mac net.HardwareAddr) []net.IP {
+func (d DiscoveryCacher) DNSServers(_ net.HardwareAddr) []net.IP {
 	return conf.DNSServers
 }
 
@@ -57,7 +57,7 @@ func (d DiscoveryCacher) Instance() *Instance {
 	return d.HardwareCacher.Instance
 }
 
-func (d DiscoveryCacher) LeaseTime(mac net.HardwareAddr) time.Duration {
+func (d DiscoveryCacher) LeaseTime(_ net.HardwareAddr) time.Duration {
 	return conf.DHCPLeaseTime
 }
 
@@ -93,7 +93,7 @@ func (d DiscoveryCacher) MacIsType(mac string, portType string) bool {
 	return false
 }
 
-// Mode returns whether the mac belongs to the instance, hardware, bmc, discovered, or unknown
+// Mode returns whether the mac belongs to the instance, hardware, bmc, discovered, or unknown.
 func (d DiscoveryCacher) Mode() string {
 	mac := d.mac
 	if d.InstanceIP(mac.String()) != nil {
@@ -134,12 +134,12 @@ func (d DiscoveryCacher) GetIP(mac net.HardwareAddr) IP {
 	return IP{}
 }
 
-// dummy method for tink data model transition
-func (d DiscoveryCacher) GetMAC(ip net.IP) net.HardwareAddr {
+// dummy method for tink data model transition.
+func (d DiscoveryCacher) GetMAC(_ net.IP) net.HardwareAddr {
 	return d.PrimaryDataMAC().HardwareAddr()
 }
 
-// InstanceIP returns the IP configuration that should be Offered to the instance if there is one; if it's prov/deprov'ing, it's the hardware IP
+// InstanceIP returns the IP configuration that should be Offered to the instance if there is one; if it's prov/deprov'ing, it's the hardware IP.
 func (d DiscoveryCacher) InstanceIP(mac string) *IP {
 	if d.Instance() == nil || d.Instance().ID == "" || !d.MacIsType(mac, "data") || d.PrimaryDataMAC().HardwareAddr().String() != mac {
 		return nil
@@ -151,7 +151,7 @@ func (d DiscoveryCacher) InstanceIP(mac string) *IP {
 		return ip
 	}
 	if d.Instance().State == "provisioning" || d.Instance().State == "deprovisioning" {
-		ip := d.hardwareIP()
+		ip := d.privateIP()
 		if ip != nil {
 			return ip
 		}
@@ -160,7 +160,7 @@ func (d DiscoveryCacher) InstanceIP(mac string) *IP {
 	return nil
 }
 
-// HardwareIP returns the IP configuration that should be offered to the hardware if there is no instance
+// HardwareIP returns the IP configuration that should be offered to the hardware if there is no instance.
 func (d DiscoveryCacher) HardwareIP(mac string) *IP {
 	if !d.MacIsType(mac, "data") {
 		return nil
@@ -169,11 +169,11 @@ func (d DiscoveryCacher) HardwareIP(mac string) *IP {
 		return nil
 	}
 
-	return d.hardwareIP()
+	return d.privateIP()
 }
 
-// hardwareIP returns the IP configuration that should be offered to the hardware (not exported)
-func (d DiscoveryCacher) hardwareIP() *IP {
+// privateIP returns a private IP that should be offered.
+func (d DiscoveryCacher) privateIP() *IP {
 	h := d.Hardware()
 	for _, ip := range h.HardwareIPs() {
 		if ip.Family != 4 {
@@ -189,7 +189,7 @@ func (d DiscoveryCacher) hardwareIP() *IP {
 	return nil
 }
 
-// ManagementIP returns the IP configuration that should be Offered to the BMC, if the MAC is a BMC MAC
+// ManagementIP returns the IP configuration that should be Offered to the BMC, if the MAC is a BMC MAC.
 func (d DiscoveryCacher) ManagementIP(mac string) *IP {
 	if d.MacIsType(mac, "ipmi") && d.Name != "" {
 		return &d.IPMI
@@ -198,7 +198,7 @@ func (d DiscoveryCacher) ManagementIP(mac string) *IP {
 	return nil
 }
 
-// DiscoveredIP returns the IP configuration that should be offered to a newly discovered BMC, if the MAC is a BMC MAC
+// DiscoveredIP returns the IP configuration that should be offered to a newly discovered BMC, if the MAC is a BMC MAC.
 func (d DiscoveryCacher) DiscoveredIP(mac string) *IP {
 	if d.MacIsType(mac, "ipmi") && d.Name == "" {
 		return &d.IPMI
@@ -207,7 +207,7 @@ func (d DiscoveryCacher) DiscoveredIP(mac string) *IP {
 	return nil
 }
 
-// PrimaryDataMAC returns the mac associated with eth0, or as a fallback the lowest numbered non-bmc MAC address
+// PrimaryDataMAC returns the mac associated with eth0, or as a fallback the lowest numbered non-bmc MAC address.
 func (d DiscoveryCacher) PrimaryDataMAC() MACAddr {
 	mac := OnesMAC
 	for _, port := range d.NetworkPorts {
@@ -231,7 +231,7 @@ func (d DiscoveryCacher) PrimaryDataMAC() MACAddr {
 	return mac
 }
 
-// ManagementMAC returns the mac address of the BMC interface
+// ManagementMAC returns the mac address of the BMC interface.
 func (d DiscoveryCacher) ManagementMAC() MACAddr {
 	for _, port := range d.NetworkPorts {
 		if port.Type == "ipmi" {
@@ -294,15 +294,15 @@ func (i InterfaceCacher) Name() string {
 	return i.Port.Name
 }
 
-func (h HardwareCacher) HardwareAllowPXE(mac net.HardwareAddr) bool {
+func (h HardwareCacher) HardwareAllowPXE(_ net.HardwareAddr) bool {
 	return h.AllowPXE
 }
 
-func (h HardwareCacher) HardwareAllowWorkflow(mac net.HardwareAddr) bool {
+func (h HardwareCacher) HardwareAllowWorkflow(_ net.HardwareAddr) bool {
 	return h.AllowWorkflow
 }
 
-func (h HardwareCacher) HardwareArch(mac net.HardwareAddr) string {
+func (h HardwareCacher) HardwareArch(_ net.HardwareAddr) string {
 	return h.Arch
 }
 
@@ -350,22 +350,22 @@ func (h HardwareCacher) HardwareState() HardwareState {
 	return h.State
 }
 
-func (h HardwareCacher) HardwareUEFI(mac net.HardwareAddr) bool {
+func (h HardwareCacher) HardwareUEFI(_ net.HardwareAddr) bool {
 	return h.UEFI
 }
 
-// dummy method for tink data model transition
-func (h HardwareCacher) OSIEBaseURL(mac net.HardwareAddr) string {
+// dummy method for tink data model transition.
+func (h HardwareCacher) OSIEBaseURL(_ net.HardwareAddr) string {
 	return ""
 }
 
-// dummy method for tink data model transition
-func (h HardwareCacher) KernelPath(mac net.HardwareAddr) string {
+// dummy method for tink data model transition.
+func (h HardwareCacher) KernelPath(_ net.HardwareAddr) string {
 	return ""
 }
 
-// dummy method for tink data model transition
-func (h HardwareCacher) InitrdPath(mac net.HardwareAddr) string {
+// dummy method for tink data model transition.
+func (h HardwareCacher) InitrdPath(_ net.HardwareAddr) string {
 	return ""
 }
 

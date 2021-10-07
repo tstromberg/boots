@@ -14,12 +14,12 @@ import (
 //    * methods only return the first interface's information and ignore everything else
 //    * methods don't have godoc yet and since this is for test maybe never will?
 
-// DiscoveryStandalone implements the Discovery interface for standalone operation
+// DiscoveryStandalone implements the Discovery interface for standalone operation.
 type DiscoverStandalone struct {
 	*HardwareStandalone
 }
 
-// HardwareStandalone implements the Hardware interface for standalone operation
+// HardwareStandalone implements the Hardware interface for standalone operation.
 type HardwareStandalone struct {
 	ID       string   `json:"id"`
 	Network  Network  `json:"network"`
@@ -42,12 +42,12 @@ func (ds DiscoverStandalone) MAC() net.HardwareAddr {
 	return ds.getPrimaryInterface().DHCP.MAC.HardwareAddr()
 }
 
-// TODO: figure out where this gets used and how to return a useful value
+// TODO: figure out where this gets used and how to return a useful value.
 func (ds DiscoverStandalone) Mode() string {
 	return "hardware"
 }
 
-func (ds DiscoverStandalone) GetIP(addr net.HardwareAddr) IP {
+func (ds DiscoverStandalone) GetIP(_ net.HardwareAddr) IP {
 	return ds.getPrimaryInterface().DHCP.IP
 }
 
@@ -62,7 +62,7 @@ func (ds DiscoverStandalone) GetMAC(ip net.IP) net.HardwareAddr {
 	return ds.emptyInterface().DHCP.MAC.HardwareAddr()
 }
 
-func (ds DiscoverStandalone) DnsServers(mac net.HardwareAddr) []net.IP {
+func (ds DiscoverStandalone) DNSServers(_ net.HardwareAddr) []net.IP {
 	iface := ds.getPrimaryInterface()
 	out := make([]net.IP, len(iface.DHCP.NameServers))
 	for i, v := range iface.DHCP.NameServers {
@@ -72,7 +72,7 @@ func (ds DiscoverStandalone) DnsServers(mac net.HardwareAddr) []net.IP {
 	return out
 }
 
-func (ds DiscoverStandalone) LeaseTime(mac net.HardwareAddr) time.Duration {
+func (ds DiscoverStandalone) LeaseTime(_ net.HardwareAddr) time.Duration {
 	// TODO(@tobert) guessed that it's seconds, could be worng
 	return time.Duration(ds.getPrimaryInterface().DHCP.LeaseTime) * time.Second
 }
@@ -87,19 +87,19 @@ func (ds DiscoverStandalone) Hardware() Hardware {
 	return h
 }
 
-func (ds DiscoverStandalone) SetMAC(mac net.HardwareAddr) {
+func (ds DiscoverStandalone) SetMAC(_ net.HardwareAddr) {
 	// TODO: set the MAC, not sure this is useful?
 }
 
-func (hs HardwareStandalone) HardwareAllowPXE(mac net.HardwareAddr) bool {
+func (hs HardwareStandalone) HardwareAllowPXE(_ net.HardwareAddr) bool {
 	return hs.getPrimaryInterface().Netboot.AllowPXE
 }
 
-func (hs HardwareStandalone) HardwareAllowWorkflow(mac net.HardwareAddr) bool {
+func (hs HardwareStandalone) HardwareAllowWorkflow(_ net.HardwareAddr) bool {
 	return hs.getPrimaryInterface().Netboot.AllowWorkflow
 }
 
-func (hs HardwareStandalone) HardwareArch(mac net.HardwareAddr) string {
+func (hs HardwareStandalone) HardwareArch(_ net.HardwareAddr) string {
 	return hs.getPrimaryInterface().DHCP.Arch
 }
 
@@ -152,19 +152,19 @@ func (hs HardwareStandalone) HardwareOSIEVersion() string {
 	return "" // stubbed out in tink too
 }
 
-func (hs HardwareStandalone) HardwareUEFI(mac net.HardwareAddr) bool {
+func (hs HardwareStandalone) HardwareUEFI(_ net.HardwareAddr) bool {
 	return hs.getPrimaryInterface().DHCP.UEFI
 }
 
-func (hs HardwareStandalone) OSIEBaseURL(mac net.HardwareAddr) string {
+func (hs HardwareStandalone) OSIEBaseURL(_ net.HardwareAddr) string {
 	return hs.getPrimaryInterface().Netboot.OSIE.BaseURL
 }
 
-func (hs HardwareStandalone) KernelPath(mac net.HardwareAddr) string {
+func (hs HardwareStandalone) KernelPath(_ net.HardwareAddr) string {
 	return hs.getPrimaryInterface().Netboot.OSIE.Kernel
 }
 
-func (hs HardwareStandalone) InitrdPath(mac net.HardwareAddr) string {
+func (hs HardwareStandalone) InitrdPath(_ net.HardwareAddr) string {
 	return hs.getPrimaryInterface().Netboot.OSIE.Initrd
 }
 
@@ -180,9 +180,8 @@ func (hs HardwareStandalone) OperatingSystem() *OperatingSystem {
 func (hs HardwareStandalone) getPrimaryInterface() NetworkInterface {
 	if len(hs.Network.Interfaces) >= 1 {
 		return hs.Network.Interfaces[0]
-	} else {
-		return hs.emptyInterface()
 	}
+	return hs.emptyInterface()
 }
 
 func (hs HardwareStandalone) emptyInterface() NetworkInterface {

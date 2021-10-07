@@ -15,3 +15,6 @@ deploy/stack/state/webroot/workflow/*
 !deploy/stack/state/webroot/workflow/.keep
 deploy/stack/state/webroot/*.gz
 workflow_id.txt
+
+# added by lint-install
+out/

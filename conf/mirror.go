@@ -22,8 +22,7 @@ var (
 	MirrorHost    = mirrorURL.Host
 	MirrorPath    = mirrorURL.Path
 	MirrorBase    = strings.TrimSuffix(MirrorURL, MirrorPath)
-	mirrorBaseUrl = mustBuildMirrorBaseURL()
-	MirrorBaseUrl = mirrorBaseUrl.String()
+	MirrorBaseURL = mustBuildMirrorBaseURL().String()
 )
 
 func buildMirrorURL() (*url.URL, error) {

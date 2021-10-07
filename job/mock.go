@@ -12,7 +12,7 @@ import (
 
 type Mock Job
 
-// NewMock returns a mock Job with only minimal fields set, it is useful only for tests
+// NewMock returns a mock Job with only minimal fields set, it is useful only for tests.
 func NewMock(t zaptest.TestingT, slug, facility string) Mock {
 	slugs := strings.Split(slug, ":")
 	slug = slugs[0]
@@ -56,19 +56,11 @@ func NewMock(t zaptest.TestingT, slug, facility string) Mock {
 	}
 }
 
-func NewMockFromDiscovery(d packet.Discovery, mac net.HardwareAddr) Mock {
-	mockLog, _ := log.Init("job.Mock")
-	j := Job{Logger: mockLog, mac: mac}
-	j.setup(d)
-
-	return Mock(j)
+func (m *Mock) Job() Job {
+	return Job(*m)
 }
 
-func (m Mock) Job() Job {
-	return Job(m)
-}
-
-func (m Mock) DropInstance() {
+func (m *Mock) DropInstance() {
 	m.instance = nil
 }
 
@@ -94,7 +86,7 @@ func (m *Mock) SetMAC(mac string) {
 
 func (m *Mock) SetManufacturer(slug string) {
 	hp := m.hardware
-	h := hp.(*packet.HardwareCacher)
+	h := hp.(*packet.HardwareCacher) //nolint:forcetypeassert // it's ok if we panic here
 	h.Manufacturer = packet.Manufacturer{Slug: slug}
 }
 
@@ -123,14 +115,14 @@ func (m *Mock) SetOSInstallerData(installerData *packet.InstallerData) {
 	m.hardware.OperatingSystem().InstallerData = installerData
 }
 
-func (m *Mock) SetPassword(password string) {
+func (m *Mock) SetPassword(_ string) {
 	m.instance.CryptedRootPassword = "insecure"
 	m.instance.PasswordHash = "insecure"
 }
 
 func (m *Mock) SetState(state string) {
 	hp := m.hardware
-	h := hp.(*packet.HardwareCacher)
+	h := hp.(*packet.HardwareCacher) // nolint:forcetypeassert // it's ok if we panic here
 	h.State = packet.HardwareState(state)
 }
 
@@ -144,13 +136,13 @@ func MakeHardwareWithInstance() (*packet.DiscoveryCacher, []packet.MACAddr, stri
 	mac1 := packet.MACAddr([6]byte{0x00, 0xBA, 0xDD, 0xBE, 0xEF, 0x01})
 	mac2 := packet.MACAddr([6]byte{0x00, 0xBA, 0xDD, 0xBE, 0xEF, 0x02})
 	mac3 := packet.MACAddr([6]byte{0x00, 0xBA, 0xDD, 0xBE, 0xEF, 0x03})
-	instanceId := uuid.New().String()
+	instanceID := uuid.New().String()
 	d := &packet.DiscoveryCacher{
 		HardwareCacher: &packet.HardwareCacher{
 			ID:   uuid.New().String(),
 			Name: "TestSetupInstanceHardwareName",
 			NetworkPorts: []packet.Port{
-				packet.Port{
+				{
 					Type: "data",
 					Name: "eth0",
 					Data: struct {
@@ -161,7 +153,7 @@ func MakeHardwareWithInstance() (*packet.DiscoveryCacher, []packet.MACAddr, stri
 						Bond: "bond0",
 					},
 				},
-				packet.Port{
+				{
 					Type: "data",
 					Name: "eth1",
 					Data: struct {
@@ -172,7 +164,7 @@ func MakeHardwareWithInstance() (*packet.DiscoveryCacher, []packet.MACAddr, stri
 						Bond: "bond0",
 					},
 				},
-				packet.Port{
+				{
 					Type: "data",
 					Name: "eth2",
 					Data: struct {
@@ -183,7 +175,7 @@ func MakeHardwareWithInstance() (*packet.DiscoveryCacher, []packet.MACAddr, stri
 						Bond: "bond1",
 					},
 				},
-				packet.Port{
+				{
 					Type: "data",
 					Name: "eth3",
 					Data: struct {
@@ -194,7 +186,7 @@ func MakeHardwareWithInstance() (*packet.DiscoveryCacher, []packet.MACAddr, stri
 						Bond: "bond1",
 					},
 				},
-				packet.Port{
+				{
 					Type: "ipmi",
 					Name: "ipmi0",
 					Data: struct {
@@ -206,10 +198,10 @@ func MakeHardwareWithInstance() (*packet.DiscoveryCacher, []packet.MACAddr, stri
 				},
 			},
 			Instance: &packet.Instance{
-				ID:       instanceId,
+				ID:       instanceID,
 				Hostname: "TestSetupInstanceHostname",
 				IPs: []packet.IP{
-					packet.IP{
+					{
 						Address:    net.ParseIP("192.168.100.2"),
 						Gateway:    net.ParseIP("192.168.100.1"),
 						Netmask:    net.ParseIP("192.168.100.255"),
@@ -217,7 +209,7 @@ func MakeHardwareWithInstance() (*packet.DiscoveryCacher, []packet.MACAddr, stri
 						Management: true,
 						Public:     true,
 					},
-					packet.IP{
+					{
 						Address:    net.ParseIP("192.168.200.2"),
 						Gateway:    net.ParseIP("192.168.200.1"),
 						Netmask:    net.ParseIP("192.168.200.255"),
@@ -238,7 +230,7 @@ func MakeHardwareWithInstance() (*packet.DiscoveryCacher, []packet.MACAddr, stri
 		},
 	}
 
-	return d, []packet.MACAddr{macIPMI, mac0, mac1, mac2, mac3}, instanceId
+	return d, []packet.MACAddr{macIPMI, mac0, mac1, mac2, mac3}, instanceID
 }
 
 func MakeHardwareWithoutInstance() (*packet.DiscoveryCacher, packet.MACAddr) {
@@ -248,7 +240,7 @@ func MakeHardwareWithoutInstance() (*packet.DiscoveryCacher, packet.MACAddr) {
 			ID:   uuid.New().String(),
 			Name: "TestSetupWithoutInstanceHardwareName",
 			NetworkPorts: []packet.Port{
-				packet.Port{
+				{
 					Type: "data",
 					Name: "eth0",
 					Data: struct {

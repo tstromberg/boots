@@ -69,10 +69,10 @@ func Setup(rep *dhcp4.Packet) {
 }
 
 // Version we override in our iPXE build so we can differentiate between vendor/nic builtins vs ours (with the features we need/want)
-// see VERSION_PATCH=255 in ./ipxe/ipxe/build.sh:43
+// see VERSION_PATCH=255 in ./ipxe/ipxe/build.sh:43.
 var ouriPXEVersion = []byte{1, 0, 255}
 
-// IsOuriPXE returns bool depending on if the request originated from our custom built/embedded iPXE
+// IsOuriPXE returns bool depending on if the request originated from our custom built/embedded iPXE.
 func IsOuriPXE(req *dhcp4.Packet) bool {
 	// TODO: make this actually check for iPXE and use ipxe' build system's ability to set name.
 	// This way we could set to something like "Boots iPXE" and then just look for that in the identifier sent in dhcp.
@@ -86,7 +86,7 @@ func IsOuriPXE(req *dhcp4.Packet) bool {
 	return false
 }
 
-// IsIPXE returns bool depending on if the request originated with a version of iPXE
+// IsIPXE returns bool depending on if the request originated with a version of iPXE.
 func IsIPXE(req *dhcp4.Packet) bool {
 	if om := GetEncapsulatedOptions(req); om != nil && HasFeature(om, FeatureHTTP) {
 		return true
@@ -156,11 +156,8 @@ func formatFeature(info *optionInfo, b []byte) (string, string) {
 	}
 	v := b[0]
 
-	switch info.Type {
-	case "bool":
-		if v == 1 {
-			return info.Name, "true"
-		}
+	if info.Type == "bool" && v == 1 {
+		return info.Name, "true"
 	}
 
 	return info.Name, fmt.Sprintf("%d", v)
@@ -168,8 +165,6 @@ func formatFeature(info *optionInfo, b []byte) (string, string) {
 
 func formatOption(info *optionInfo, b []byte) (string, string) {
 	switch info.Type {
-	case "string", "":
-		break
 	case "hex":
 		buf := make([]byte, 0, len(b)*2+len(b)-1)
 		for i, c := range b {

@@ -2,6 +2,7 @@ package job
 
 import (
 	"context"
+	"fmt"
 	"net/http"
 
 	"github.com/pkg/errors"
@@ -16,8 +17,7 @@ type BootScript func(context.Context, Job, ipxe.Script) ipxe.Script
 
 func (i *Installers) RegisterDefaultInstaller(bs BootScript) {
 	if i.Default != nil {
-		err := errors.New("default installer already registered!")
-		joblog.Fatal(err)
+		joblog.Fatal(fmt.Errorf("default installer already registered: %+v", i.Default))
 	}
 	i.Default = bs
 }
@@ -114,6 +114,6 @@ func (i Installers) auto(ctx context.Context, j Job, s ipxe.Script) ipxe.Script 
 	return *s.Shell()
 }
 
-func shell(ctx context.Context, j Job, s ipxe.Script) ipxe.Script {
+func shell(_ context.Context, _ Job, s ipxe.Script) ipxe.Script {
 	return *s.Shell()
 }

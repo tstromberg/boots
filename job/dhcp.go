@@ -70,28 +70,7 @@ func (j Job) configureDHCP(ctx context.Context, rep, req *dhcp4.Packet) bool {
 	}
 
 	if dhcp.SetupPXE(ctx, rep, req) {
-		arch := "x86"
-		firmware := "bios"
-
-		isARM := dhcp.IsARM(req)
-		if dhcp.Arch(req) != j.Arch() {
-			span.AddEvent(fmt.Sprintf("arch mismatch: got %q and expected %q", dhcp.Arch(req), j.Arch()))
-			j.With("dhcp", dhcp.Arch(req), "job", j.Arch()).Info("arch mismatch, using dhcp")
-		}
-		if isARM {
-			arch = "arm"
-			if parch := j.PArch(); parch == "2a2" || parch == "hua" {
-				arch = "hua"
-			}
-		}
-
-		isUEFI := dhcp.IsUEFI(req)
-		if isUEFI != j.IsUEFI() {
-			j.With("dhcp", isUEFI, "job", j.IsUEFI()).Info("uefi mismatch, using dhcp")
-		}
-		if isUEFI {
-			firmware = "uefi"
-		}
+		arch, firmware := j.archFirmware(ctx, req)
 
 		isOuriPXE := ipxe.IsOuriPXE(req)
 		if isOuriPXE {
@@ -106,12 +85,41 @@ func (j Job) configureDHCP(ctx context.Context, rep, req *dhcp4.Packet) bool {
 			return false
 		}
 		dhcp.SetFilename(rep, filename, conf.PublicIPv4)
-
 	} else {
 		span.AddEvent("did not SetupPXE because packet is not a PXE request")
 	}
 
 	return true
+}
+
+// archFirmware returns the arch and firmware based on a DHCP request.
+func (j Job) archFirmware(ctx context.Context, req *dhcp4.Packet) (string, string) {
+	span := trace.SpanFromContext(ctx)
+	arch := "x86"
+	firmware := "bios"
+
+	if dhcp.Arch(req) != j.Arch() {
+		span.AddEvent(fmt.Sprintf("arch mismatch: got %q and expected %q", dhcp.Arch(req), j.Arch()))
+		j.With("dhcp", dhcp.Arch(req), "job", j.Arch()).Info("arch mismatch, using dhcp")
+	}
+
+	if dhcp.IsARM(req) {
+		arch = "arm"
+		if parch := j.PArch(); parch == "2a2" || parch == "hua" {
+			arch = "hua"
+		}
+	}
+
+	isUEFI := dhcp.IsUEFI(req) //nolint:ifshort // linter is wrong
+	if isUEFI != j.IsUEFI() {
+		j.With("dhcp", isUEFI, "job", j.IsUEFI()).Info("uefi mismatch, using dhcp")
+	}
+
+	if isUEFI {
+		firmware = "uefi"
+	}
+
+	return arch, firmware
 }
 
 func (j Job) isPXEAllowed() bool {

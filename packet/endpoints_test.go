@@ -39,20 +39,24 @@ func TestDiscoverHardwareFromDHCP(t *testing.T) {
 		hResponse string
 		id        HardwareID
 	}{
-		{name: "has grpc error",
-			err: errors.New("some error"),
+		{
+			name: "has grpc error",
+			err:  errors.New("some error"),
 		},
-		{name: "data in cacher",
+		{
+			name:      "data in cacher",
 			gResponse: `{"id":"%s"}`,
 		},
-		{name: "data in packet api",
+		{
+			name:      "data in packet api",
 			hResponse: `{"id":"%s"}`,
 		},
-		{name: "unknown",
+		{
+			name:      "unknown",
 			hResponse: "{}",
-			code:      http.StatusNotFound},
+			code:      http.StatusNotFound,
+		},
 	} {
-
 		t.Run(test.name, func(t *testing.T) {
 			id := uuid.New()
 			if test.gResponse != "" {
@@ -77,7 +81,7 @@ func TestDiscoverHardwareFromDHCP(t *testing.T) {
 			cMock := cacherMock.NewMockCacherClient(ctrl)
 			cMock.EXPECT().ByMAC(gomock.Any(), gomock.Any()).Return(&cacher.Hardware{JSON: test.gResponse}, test.err)
 
-			c := &client{
+			c := &Client{
 				baseURL:        u,
 				http:           s.Client(),
 				hardwareClient: cMock,
@@ -107,7 +111,8 @@ func TestGetWorkflowsFromTink(t *testing.T) {
 		wcl  *tw.WorkflowContextList
 		err  error
 	}{
-		{name: "test hardware workflow",
+		{
+			name: "test hardware workflow",
 			hwID: "Hardware-fake-bde9-812726eff314",
 			wcl: &tw.WorkflowContextList{
 				WorkflowContexts: []*tw.WorkflowContext{

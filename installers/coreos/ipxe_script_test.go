@@ -21,6 +21,8 @@ var facility = func() string {
 }()
 
 func TestScript(t *testing.T) {
+	ctx := context.Background()
+
 	for _, distro := range []string{"coreos", "flatcar"} {
 		for typ, script := range type2Script {
 			t.Run(typ+"-"+distro, func(t *testing.T) {
@@ -33,9 +35,9 @@ func TestScript(t *testing.T) {
 				s.Set("tinkerbell", "http://127.0.0.1")
 				s.Set("ipxe_cloud_config", "packet")
 				i := Installer{}
-				bs := i.BootScript()(context.Background(), m.Job(), s)
+				bs := i.BootScript()(ctx, m.Job(), s)
 				got := string(bs.Bytes())
-				script = strings.Replace(script, "coreos", distro, -1)
+				script = strings.ReplaceAll(script, "coreos", distro)
 				if script != got {
 					t.Fatalf("%s bad iPXE script:\n%v", typ, diff.LineDiff(script, got))
 				}

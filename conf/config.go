@@ -22,7 +22,7 @@ var (
 	TFTPBind   = env.Get("TFTP_BIND", PublicIPv4.String()+":69")
 	BOOTPBind  = env.Get("BOOTP_BIND", PublicIPv4.String()+":67")
 
-	// Default to Google Public DNS
+	// Default to Google Public DNS.
 	DHCPLeaseTime = env.Duration("DHCP_LEASE_TIME", (2 * 24 * time.Hour))
 	DNSServers    = ParseIPv4s(env.Get("DNS_SERVERS", "8.8.8.8,8.8.4.4"))
 
@@ -31,10 +31,10 @@ var (
 
 	TrustedProxies = parseTrustedProxies()
 
-	// Eclypsium registration token, passed into osie
+	// Eclypsium registration token, passed into osie.
 	EclypsiumToken = env.Get("ECLYPSIUM_TOKEN")
-	// Hollow auth secrets, passed into osie
-	HollowClientId            = env.Get("HOLLOW_CLIENT_ID")
+	// Hollow auth secrets, passed into osie.
+	HollowClientID            = env.Get("HOLLOW_CLIENT_ID")
 	HollowClientRequestSecret = env.Get("HOLLOW_CLIENT_REQUEST_SECRET")
 )
 
@@ -110,7 +110,6 @@ func getIgnoredMACs() map[string]struct{} {
 		}
 		oui = strings.ToLower(oui)
 		ignore[oui] = struct{}{}
-
 	}
 
 	return ignore
@@ -143,7 +142,6 @@ func getIgnoredGIs() map[string]struct{} {
 			panic(errors.Errorf("invalid ip address in TINK_IGNORED_GIS ip=%s", ip))
 		}
 		ignore[ip] = struct{}{}
-
 	}
 
 	return ignore
@@ -165,14 +163,15 @@ func parseTrustedProxies() (result []string) {
 		if cidr == "" {
 			continue
 		}
+
 		_, _, err := net.ParseCIDR(cidr)
 		if err != nil {
 			// Its not a cidr, but maybe its an IP
 			if ip := net.ParseIP(cidr); ip != nil {
 				if ip.To4() != nil {
-					cidr = cidr + "/32"
+					cidr += "/32"
 				} else {
-					cidr = cidr + "/128"
+					cidr += "/128"
 				}
 			} else {
 				// not an IP, panic
